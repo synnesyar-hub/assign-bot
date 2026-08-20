@@ -39,6 +39,9 @@ jobs:
         run: |
           playwright install --with-deps chromium
 
+      - name: Test connectivity
+        run: curl -v --max-time 15 https://oss-incident.telkom.co.id || true
+
       - name: Run scrape (Database & Database2 only)
         env:
           INS_USERNAME: ${{ secrets.INS_USERNAME }}
