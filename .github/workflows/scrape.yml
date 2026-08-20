@@ -1,0 +1,48 @@
+# .github/workflows/scrape.yml
+
+name: Scrape Database & Database2
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # tiap 5 menit (waktu UTC, tidak dijamin presisi oleh GitHub)
+  workflow_dispatch: {}     # biar bisa trigger manual dari tab Actions kalau perlu
+
+concurrency:
+  group: scrape-gha
+  cancel-in-progress: true  # kalau run baru mulai sementara run lama masih jalan, run lama dibatalkan
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8   # jaga-jaga -- kalau macet, jangan sampai gantung lama & numpuk antrian
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}
+
+      - name: Install Playwright Chromium
+        run: |
+          playwright install --with-deps chromium
+
+      - name: Run scrape (Database & Database2 only)
+        env:
+          INS_USERNAME: ${{ secrets.INS_USERNAME }}
+          INS_PASSWORD: ${{ secrets.INS_PASSWORD }}
+          INS_OTP_SECRET: ${{ secrets.INS_OTP_SECRET }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python run_scrape_gha.py

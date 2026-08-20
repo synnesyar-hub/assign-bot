@@ -1,0 +1,9 @@
+playwright==1.54.0
+pyotp==2.9.0
+python-dotenv==1.2.1
+telethon==1.42.0
+gspread==6.1.4
+google-auth==2.35.0
+asyncpg==0.31.0
+fastapi==0.115.0
+uvicorn[standard]==0.32.0

@@ -1,0 +1,11 @@
+.env
+*.json
+!package.json
+assign_session.json
+gsheet_credentials.json
+locks/
+__pycache__/
+*.pyc
+venv/
+jobs.db
+wo-kendari-dashboard/
