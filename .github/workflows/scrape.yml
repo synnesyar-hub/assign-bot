@@ -20,6 +20,29 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Install & connect Cloudflare WARP
+        run: |
+          curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | sudo gpg --yes --dearmor --output /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/cloudflare-client.list
+          sudo apt-get update && sudo apt-get install -y cloudflare-warp
+
+          sudo warp-cli --accept-tos registration new
+          sudo warp-cli --accept-tos mode warp
+          sudo warp-cli --accept-tos connect
+
+          # tunggu sampai status Connected (max ~30 detik)
+          for i in $(seq 1 15); do
+            STATUS=$(warp-cli --accept-tos status | head -n1)
+            echo "warp status: $STATUS"
+            if echo "$STATUS" | grep -q "Connected"; then
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Verify egress IP location
+        run: curl -s https://ipinfo.io | tee ipinfo.json
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -39,7 +62,7 @@ jobs:
         run: |
           playwright install --with-deps chromium
 
-      - name: Test connectivity
+      - name: Test connectivity to target site
         run: curl -v --max-time 15 https://oss-incident.telkom.co.id || true
 
       - name: Run scrape (Database & Database2 only)
