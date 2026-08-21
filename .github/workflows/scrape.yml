@@ -63,7 +63,10 @@ jobs:
           playwright install --with-deps chromium
 
       - name: Test connectivity to target site
-        run: curl -v --max-time 15 https://oss-incident.telkom.co.id || true
+        run: |
+          curl -v --max-time 15 -o response.html -w "\nHTTP_STATUS: %{http_code}\n" https://oss-incident.telkom.co.id || true
+          echo "--- Body response (500 karakter pertama) ---"
+          head -c 500 response.html
 
       - name: Run scrape (Database & Database2 only)
         env:
