@@ -1,6 +1,8 @@
 .env
 *.json
 !package.json
+!package-lock.json
+!tsconfig.json
 assign_session.json
 gsheet_credentials.json
 locks/
@@ -8,4 +10,3 @@ __pycache__/
 *.pyc
 venv/
 jobs.db
-
