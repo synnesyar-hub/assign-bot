@@ -9,7 +9,7 @@ import RecapAllButton from '@/components/RecapAllButton'
 import { useAllTickets, WoTicketWithCity } from '@/lib/useAllTickets'
 import { useCurrentUser } from '@/lib/useCurrentUser'
 import { usePins } from '@/lib/usePins'
-import { WoStatus, CITY_TABLE, SortOption, SORT_OPTIONS } from '@/lib/types'
+import { WoStatus, CITY_TABLE, SortOption } from '@/lib/types'
 
 export default function TiketPage() {
   const { tickets, changeStatus } = useAllTickets()
@@ -17,7 +17,7 @@ export default function TiketPage() {
   const [statusFilter, setStatusFilter] = useState<WoStatus | 'ALL'>('ALL')
   const [areaFilter, setAreaFilter] = useState<string[]>([]) // service_area, kosong = semua
   const [rayonFilter, setRayonFilter] = useState<string[]>([]) // rayon, kosong = semua
-  const [sortOption, setSortOption] = useState<SortOption>(SORT_OPTIONS[0]) // default
+  const [sortHistory, setSortHistory] = useState<SortOption[]>([]) // kosong = default
   const [selected, setSelected] = useState<WoTicketWithCity | null>(null)
   const currentUser = useCurrentUser()
   const { pinnedIds, togglePin } = usePins(currentUser, 'all')
@@ -32,7 +32,7 @@ export default function TiketPage() {
     [tickets]
   )
 
-  // Sort dipindah sepenuhnya ke WoTable (butuh pinnedIds untuk urutan pin-first + status_order saat default)
+  // Sort dilakukan sepenuhnya di WoTable (butuh pinnedIds + status_order)
   const filtered = useMemo(() => {
     return tickets.filter((row) => {
       const matchSearch =
@@ -82,8 +82,8 @@ export default function TiketPage() {
           data={filtered}
           onRowClick={(item) => setSelected(item as WoTicketWithCity)}
           pinnedIds={pinnedIds}
-          sortOption={sortOption}
-          onSortOptionChange={setSortOption}
+          sortHistory={sortHistory}
+          onSortHistoryChange={setSortHistory}
         />
       </div>
 

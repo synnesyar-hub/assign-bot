@@ -57,19 +57,21 @@ function SortHeaderDropdown({
   colLabel,
   isNumeric,
   isStatusOrder,
-  sortOption,
-  onSortOptionChange,
+  currentDir,
+  onChoose,
+  onReset,
 }: {
   colKey: string
   colLabel: string
   isNumeric: boolean
   isStatusOrder: boolean
-  sortOption: SortOption
-  onSortOptionChange: (v: SortOption) => void
+  currentDir: 'asc' | 'desc' | null
+  onChoose: (dir: 'asc' | 'desc') => void
+  onReset: () => void
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
-  const isActive = sortOption.key === colKey
+  const isActive = currentDir !== null
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -79,11 +81,11 @@ function SortHeaderDropdown({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const ascLabel = isStatusOrder ? 'Open - Close' : isNumeric ? 'Terendah' : 'A-Z'
-  const descLabel = isStatusOrder ? 'Close - Open' : isNumeric ? 'Tertinggi' : 'Z-A'
+  const ascLabel = isStatusOrder ? 'Urutan Kerja' : isNumeric ? 'Terendah' : 'A-Z'
+  const descLabel = isStatusOrder ? 'Terbalik' : isNumeric ? 'Tertinggi' : 'Z-A'
 
   const choose = (dir: 'asc' | 'desc') => {
-    onSortOptionChange({ key: colKey, dir })
+    onChoose(dir)
     setOpen(false)
   }
 
@@ -99,7 +101,7 @@ function SortHeaderDropdown({
       >
         {colLabel}
         <span className={`text-[10px] ${isActive ? 'text-blue-600' : 'text-gray-400'}`}>
-          {isActive ? (sortOption.dir === 'asc' ? '▲' : '▼') : '⇅'}
+          {isActive ? (currentDir === 'asc' ? '▲' : '▼') : '⇅'}
         </span>
       </button>
 
@@ -109,7 +111,7 @@ function SortHeaderDropdown({
             type="button"
             onClick={() => choose('asc')}
             className={`block w-full px-3 py-2 text-left text-sm font-normal tracking-normal ${
-              isActive && sortOption.dir === 'asc' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'
+              isActive && currentDir === 'asc' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'
             }`}
           >
             {ascLabel}
@@ -118,7 +120,7 @@ function SortHeaderDropdown({
             type="button"
             onClick={() => choose('desc')}
             className={`block w-full px-3 py-2 text-left text-sm font-normal tracking-normal ${
-              isActive && sortOption.dir === 'desc' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'
+              isActive && currentDir === 'desc' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'
             }`}
           >
             {descLabel}
@@ -127,12 +129,12 @@ function SortHeaderDropdown({
             <button
               type="button"
               onClick={() => {
-                onSortOptionChange({ key: 'default', dir: 'asc' })
+                onReset()
                 setOpen(false)
               }}
               className="block w-full border-t border-gray-100 px-3 py-2 text-left text-xs font-normal tracking-normal text-gray-400 hover:bg-gray-50"
             >
-              Reset ke Default
+              Hapus Semua Sort
             </button>
           )}
         </div>
@@ -145,46 +147,58 @@ interface TableProps {
   data: WoKendari[]
   onRowClick: (item: WoKendari) => void
   pinnedIds: Set<number>
-  sortOption: SortOption
-  onSortOptionChange: (v: SortOption) => void
+  sortHistory: SortOption[] // urutan lama -> baru; entry terakhir = prioritas utama
+  onSortHistoryChange: (v: SortOption[]) => void
 }
 
-export default function WoTable({ data, onRowClick, pinnedIds, sortOption, onSortOptionChange }: TableProps) {
+export default function WoTable({ data, onRowClick, pinnedIds, sortHistory, onSortHistoryChange }: TableProps) {
   const now = useNow()
 
-  const sortWithPin = (a: WoKendari, b: WoKendari) => {
-    const aPinned = pinnedIds.has(a.id) ? 1 : 0
-    const bPinned = pinnedIds.has(b.id) ? 1 : 0
-    if (aPinned !== bPinned) return bPinned - aPinned
-    if (sortOption.key === 'default') return a.status_order - b.status_order
-    return 0
+  const activeSortOption = sortHistory[sortHistory.length - 1] ?? null
+
+  const setColumnSort = (key: string, dir: 'asc' | 'desc') => {
+    const without = sortHistory.filter((o) => o.key !== key)
+    onSortHistoryChange([...without, { key, dir }])
   }
 
-  const applySort = (rows: WoKendari[]) => {
-    if (sortOption.key === 'default') return rows
-    const sorted = [...rows].sort((a, b) => {
-      if (sortOption.key === 'ttr') {
-        const av = getTTRSeconds(a.reported_date, a.status, a.updated_at, a.booking_date)
-        const bv = getTTRSeconds(b.reported_date, b.status, b.updated_at, b.booking_date)
-        return av - bv
-      }
-      if (sortOption.key === 'ttr_manja') {
-        const av = getManjaSeconds(a.booking_date)
-        const bv = getManjaSeconds(b.booking_date)
-        return av - bv
-      }
-      if (sortOption.key === 'status') {
-        return a.status_order - b.status_order
-      }
-      const av = String(a[sortOption.key as keyof WoKendari] ?? '').toLowerCase()
-      const bv = String(b[sortOption.key as keyof WoKendari] ?? '').toLowerCase()
-      return av.localeCompare(bv, 'id', { numeric: true })
-    })
-    return sortOption.dir === 'asc' ? sorted : sorted.reverse()
+  const resetSort = () => {
+    onSortHistoryChange([])
   }
 
-  const active = applySort(data.filter((d) => ACTIVE_STATUSES.includes(d.status)).sort(sortWithPin))
-  const inactive = applySort(data.filter((d) => !ACTIVE_STATUSES.includes(d.status)).sort(sortWithPin))
+  const compareByOption = (a: WoKendari, b: WoKendari, opt: SortOption): number => {
+    let result: number
+    if (opt.key === 'ttr') {
+      result =
+        getTTRSeconds(a.reported_date, a.status, a.updated_at, a.booking_date) -
+        getTTRSeconds(b.reported_date, b.status, b.updated_at, b.booking_date)
+    } else if (opt.key === 'ttr_manja') {
+      result = getManjaSeconds(a.booking_date) - getManjaSeconds(b.booking_date)
+    } else if (opt.key === 'status') {
+      result = a.status_order - b.status_order
+    } else {
+      const av = String(a[opt.key as keyof WoKendari] ?? '').toLowerCase()
+      const bv = String(b[opt.key as keyof WoKendari] ?? '').toLowerCase()
+      result = av.localeCompare(bv, 'id', { numeric: true })
+    }
+    return opt.dir === 'asc' ? result : -result
+  }
+
+  const applyHistorySort = (rows: WoKendari[]): WoKendari[] => {
+    let result = [...rows].sort((a, b) => a.status_order - b.status_order)
+    for (const opt of sortHistory) {
+      result = [...result].sort((a, b) => compareByOption(a, b, opt))
+    }
+    return result
+  }
+
+  const applyPinFirst = (rows: WoKendari[]): WoKendari[] => {
+    const pinned = rows.filter((r) => pinnedIds.has(r.id))
+    const others = rows.filter((r) => !pinnedIds.has(r.id))
+    return [...pinned, ...others]
+  }
+
+  const active = applyPinFirst(applyHistorySort(data.filter((d) => ACTIVE_STATUSES.includes(d.status))))
+  const inactive = applyPinFirst(applyHistorySort(data.filter((d) => !ACTIVE_STATUSES.includes(d.status))))
 
   if (data.length === 0) {
     return (
@@ -204,6 +218,7 @@ export default function WoTable({ data, onRowClick, pinnedIds, sortOption, onSor
               const stickyOffset = getStickyOffset(col.key)
               const isSticky = stickyOffset !== null
               const isSortable = !NON_SORTABLE_KEYS.includes(col.key)
+              const isActiveCol = activeSortOption?.key === col.key
               return (
                 <th
                   key={col.key}
@@ -222,8 +237,9 @@ export default function WoTable({ data, onRowClick, pinnedIds, sortOption, onSor
                       colLabel={col.label}
                       isNumeric={col.key === 'ttr' || col.key === 'ttr_manja'}
                       isStatusOrder={col.key === 'status'}
-                      sortOption={sortOption}
-                      onSortOptionChange={onSortOptionChange}
+                      currentDir={isActiveCol ? activeSortOption!.dir : null}
+                      onChoose={(dir) => setColumnSort(col.key, dir)}
+                      onReset={resetSort}
                     />
                   ) : (
                     col.label
