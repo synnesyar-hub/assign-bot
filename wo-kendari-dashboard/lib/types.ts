@@ -129,7 +129,7 @@ export const COLUMN_DEFS: ColumnDef[] = [
 export interface SortOption {
   key: string
   dir: 'asc' | 'desc'
-  label: string
+  label?: string
 }
 
 export const SORT_OPTIONS: SortOption[] = [

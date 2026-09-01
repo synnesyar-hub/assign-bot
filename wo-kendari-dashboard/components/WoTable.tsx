@@ -1,10 +1,14 @@
+/* components/WoTable.tsx */
 'use client'
 
+import { useState, useRef, useEffect } from 'react'
 import EmptyState from '@/components/EmptyState'
-import { WoKendari, COLUMN_DEFS, ACTIVE_STATUSES } from '@/lib/types'
+import { WoKendari, COLUMN_DEFS, ACTIVE_STATUSES, SortOption } from '@/lib/types'
 import { statusColor } from '@/lib/statusStyle'
-import { formatTTR, formatManjaCountdown, getTTRColorClass } from '@/lib/timeUtils'
+import { formatTTR, formatManjaCountdown, getTTRColorClass, getTTRSeconds } from '@/lib/timeUtils'
 import { useNow } from '@/lib/useNow'
+
+const NON_SORTABLE_KEYS = ['status', 'ttr_manja']
 
 const STICKY_KEYS = ['incident', 'reported_date', 'ttr', 'customer_type_label', 'service_no']
 const STICKY_WIDTHS: Record<string, number> = {
@@ -48,25 +52,129 @@ function BookmarkIconSmall({ color }: { color: string }) {
   )
 }
 
+function SortHeaderDropdown({
+  colKey,
+  colLabel,
+  isNumeric,
+  sortOption,
+  onSortOptionChange,
+}: {
+  colKey: string
+  colLabel: string
+  isNumeric: boolean
+  sortOption: SortOption
+  onSortOptionChange: (v: SortOption) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const isActive = sortOption.key === colKey
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const ascLabel = isNumeric ? 'Terendah' : 'A-Z'
+  const descLabel = isNumeric ? 'Tertinggi' : 'Z-A'
+
+  const choose = (dir: 'asc' | 'desc') => {
+    onSortOptionChange({ key: colKey, dir })
+    setOpen(false)
+  }
+
+  return (
+    <div ref={ref} className="relative inline-block">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          setOpen((o) => !o)
+        }}
+        className="flex items-center gap-1"
+      >
+        {colLabel}
+        <span className={`text-[10px] ${isActive ? 'text-blue-600' : 'text-gray-400'}`}>
+          {isActive ? (sortOption.dir === 'asc' ? '▲' : '▼') : '⇅'}
+        </span>
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 w-40 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 normal-case shadow-lg">
+          <button
+            type="button"
+            onClick={() => choose('asc')}
+            className={`block w-full px-3 py-2 text-left text-sm font-normal tracking-normal ${
+              isActive && sortOption.dir === 'asc' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {ascLabel}
+          </button>
+          <button
+            type="button"
+            onClick={() => choose('desc')}
+            className={`block w-full px-3 py-2 text-left text-sm font-normal tracking-normal ${
+              isActive && sortOption.dir === 'desc' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {descLabel}
+          </button>
+          {isActive && (
+            <button
+              type="button"
+              onClick={() => {
+                onSortOptionChange({ key: 'default', dir: 'asc' })
+                setOpen(false)
+              }}
+              className="block w-full border-t border-gray-100 px-3 py-2 text-left text-xs font-normal tracking-normal text-gray-400 hover:bg-gray-50"
+            >
+              Reset ke Default
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface TableProps {
   data: WoKendari[]
   onRowClick: (item: WoKendari) => void
   pinnedIds: Set<number>
+  sortOption: SortOption
+  onSortOptionChange: (v: SortOption) => void
 }
 
-export default function WoTable({ data, onRowClick, pinnedIds }: TableProps) {
-  const now = useNow() // ikut serta supaya kolom TTR/TTR Manja re-render tiap detik
+export default function WoTable({ data, onRowClick, pinnedIds, sortOption, onSortOptionChange }: TableProps) {
+  const now = useNow()
 
-  // Stable sort: hanya menaikkan baris yang di-pin ke atas, urutan lain
-  // mengikuti array `data` apa adanya (sudah di-sort dari page.tsx)
   const sortWithPin = (a: WoKendari, b: WoKendari) => {
     const aPinned = pinnedIds.has(a.id) ? 1 : 0
     const bPinned = pinnedIds.has(b.id) ? 1 : 0
-    return bPinned - aPinned
+    if (aPinned !== bPinned) return bPinned - aPinned
+    if (sortOption.key === 'default') return a.status_order - b.status_order
+    return 0
   }
 
-  const active = data.filter((d) => ACTIVE_STATUSES.includes(d.status)).sort(sortWithPin)
-  const inactive = data.filter((d) => !ACTIVE_STATUSES.includes(d.status)).sort(sortWithPin)
+  const applySort = (rows: WoKendari[]) => {
+    if (sortOption.key === 'default') return rows
+    const sorted = [...rows].sort((a, b) => {
+      if (sortOption.key === 'ttr') {
+        const av = getTTRSeconds(a.reported_date, a.status, a.updated_at, a.booking_date)
+        const bv = getTTRSeconds(b.reported_date, b.status, b.updated_at, b.booking_date)
+        return av - bv
+      }
+      const av = String(a[sortOption.key as keyof WoKendari] ?? '').toLowerCase()
+      const bv = String(b[sortOption.key as keyof WoKendari] ?? '').toLowerCase()
+      return av.localeCompare(bv, 'id', { numeric: true })
+    })
+    return sortOption.dir === 'asc' ? sorted : sorted.reverse()
+  }
+
+  const active = applySort(data.filter((d) => ACTIVE_STATUSES.includes(d.status)).sort(sortWithPin))
+  const inactive = applySort(data.filter((d) => !ACTIVE_STATUSES.includes(d.status)).sort(sortWithPin))
 
   if (data.length === 0) {
     return (
@@ -85,6 +193,7 @@ export default function WoTable({ data, onRowClick, pinnedIds }: TableProps) {
             {COLUMN_DEFS.map((col) => {
               const stickyOffset = getStickyOffset(col.key)
               const isSticky = stickyOffset !== null
+              const isSortable = !NON_SORTABLE_KEYS.includes(col.key)
               return (
                 <th
                   key={col.key}
@@ -97,7 +206,17 @@ export default function WoTable({ data, onRowClick, pinnedIds }: TableProps) {
                     isSticky ? 'bg-gray-50' : ''
                   }`}
                 >
-                  {col.label}
+                  {isSortable ? (
+                    <SortHeaderDropdown
+                      colKey={col.key}
+                      colLabel={col.label}
+                      isNumeric={col.key === 'ttr'}
+                      sortOption={sortOption}
+                      onSortOptionChange={onSortOptionChange}
+                    />
+                  ) : (
+                    col.label
+                  )}
                 </th>
               )
             })}
@@ -147,10 +266,10 @@ function RowItem({
     : undefined
 
   const stickyBgForRow = row.bookmarked_by
-   ? ''
-   : isPinned
-    ? 'bg-amber-50/60'
-     : 'bg-white'
+    ? ''
+    : isPinned
+      ? 'bg-amber-50/60'
+      : 'bg-white'
 
   return (
     <tr

@@ -2,7 +2,8 @@
 
 'use client'
 
-import { WoStatus, SortOption, SORT_OPTIONS } from '@/lib/types'
+import { useState, useRef, useEffect } from 'react'
+import { WoStatus } from '@/lib/types'
 
 const ALL_STATUSES: WoStatus[] = [
   'OPEN', 'MONITORING', 'GAMAS', 'KENDALA', 'PENDING', 'CLOSE CROSSCHECK', 'CLOSE',
@@ -14,13 +15,93 @@ interface Props {
   statusFilter: WoStatus | 'ALL'
   onStatusFilterChange: (v: WoStatus | 'ALL') => void
   areaOptions: string[]
-  areaFilter: string
-  onAreaFilterChange: (v: string) => void
+  areaFilter: string[]
+  onAreaFilterChange: (v: string[]) => void
   rayonOptions: string[]
-  rayonFilter: string
-  onRayonFilterChange: (v: string) => void
-  sortOption: SortOption
-  onSortOptionChange: (v: SortOption) => void
+  rayonFilter: string[]
+  onRayonFilterChange: (v: string[]) => void
+}
+
+function MultiSelectDropdown({
+  label,
+  options,
+  selected,
+  onChange,
+}: {
+  label: string
+  options: string[]
+  selected: string[]
+  onChange: (v: string[]) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const toggleOption = (opt: string) => {
+    if (selected.includes(opt)) {
+      onChange(selected.filter((o) => o !== opt))
+    } else {
+      onChange([...selected, opt])
+    }
+  }
+
+  const buttonLabel =
+    selected.length === 0
+      ? `Semua ${label}`
+      : selected.length === 1
+        ? selected[0]
+        : `${selected.length} ${label} dipilih`
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex min-w-[160px] items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm hover:border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-300"
+      >
+        <span className="truncate">{buttonLabel}</span>
+        <span className="text-gray-400">▾</span>
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 max-h-80 w-64 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+          {selected.length > 0 && (
+            <button
+              type="button"
+              onClick={() => onChange([])}
+              className="w-full px-4 py-2.5 text-left text-sm font-medium text-blue-600 hover:bg-gray-50"
+            >
+              Reset pilihan
+            </button>
+          )}
+          {options.length === 0 && (
+            <p className="px-4 py-3 text-sm text-gray-400">Tidak ada opsi</p>
+          )}
+          {options.map((opt) => (
+            <label
+              key={opt}
+              className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              <input
+                type="checkbox"
+                checked={selected.includes(opt)}
+                onChange={() => toggleOption(opt)}
+                className="h-4 w-4 rounded border-gray-300 accent-blue-600"
+              />
+              {opt}
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function WoFilters({
@@ -28,14 +109,7 @@ export default function WoFilters({
   statusFilter, onStatusFilterChange,
   areaOptions, areaFilter, onAreaFilterChange,
   rayonOptions, rayonFilter, onRayonFilterChange,
-  sortOption, onSortOptionChange,
 }: Props) {
-  const sortValue = `${sortOption.key}:${sortOption.dir}`
-
-  const handleSortChange = (value: string) => {
-    const found = SORT_OPTIONS.find((o) => `${o.key}:${o.dir}` === value)
-    if (found) onSortOptionChange(found)
-  }
 
   return (
     <div className="mb-4 flex flex-col gap-3">
@@ -59,39 +133,9 @@ export default function WoFilters({
           ))}
         </select>
 
-        <select
-          value={areaFilter}
-          onChange={(e) => onAreaFilterChange(e.target.value)}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-300"
-        >
-          <option value="ALL">Semua Area</option>
-          {areaOptions.map((a) => (
-            <option key={a} value={a}>{a}</option>
-          ))}
-        </select>
+        <MultiSelectDropdown label="Area" options={areaOptions} selected={areaFilter} onChange={onAreaFilterChange} />
+        <MultiSelectDropdown label="Rayon" options={rayonOptions} selected={rayonFilter} onChange={onRayonFilterChange} />
 
-        <select
-          value={rayonFilter}
-          onChange={(e) => onRayonFilterChange(e.target.value)}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-300"
-        >
-          <option value="ALL">Semua Rayon</option>
-          {rayonOptions.map((r) => (
-            <option key={r} value={r}>{r}</option>
-          ))}
-        </select>
-
-        <select
-          value={sortValue}
-          onChange={(e) => handleSortChange(e.target.value)}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-300"
-        >
-          {SORT_OPTIONS.map((o) => (
-            <option key={`${o.key}:${o.dir}`} value={`${o.key}:${o.dir}`}>
-              Urutkan: {o.label}
-            </option>
-          ))}
-        </select>
       </div>
     </div>
   )

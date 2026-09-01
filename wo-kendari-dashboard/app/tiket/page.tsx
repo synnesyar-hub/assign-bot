@@ -1,5 +1,4 @@
-/* assign-bot/wo-kendari-dashboard/app/tiket/page.tsx */
-
+/* app/tiket/page.tsx */
 'use client'
 
 import { useMemo, useState } from 'react'
@@ -11,14 +10,13 @@ import { useAllTickets, WoTicketWithCity } from '@/lib/useAllTickets'
 import { useCurrentUser } from '@/lib/useCurrentUser'
 import { usePins } from '@/lib/usePins'
 import { WoStatus, CITY_TABLE, SortOption, SORT_OPTIONS } from '@/lib/types'
-import { getTTRSeconds } from '@/lib/timeUtils'
 
 export default function TiketPage() {
   const { tickets, changeStatus } = useAllTickets()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<WoStatus | 'ALL'>('ALL')
-  const [areaFilter, setAreaFilter] = useState('ALL') // service_area, default SEMUA kota
-  const [rayonFilter, setRayonFilter] = useState('ALL') // rayon
+  const [areaFilter, setAreaFilter] = useState<string[]>([]) // service_area, kosong = semua
+  const [rayonFilter, setRayonFilter] = useState<string[]>([]) // rayon, kosong = semua
   const [sortOption, setSortOption] = useState<SortOption>(SORT_OPTIONS[0]) // default
   const [selected, setSelected] = useState<WoTicketWithCity | null>(null)
   const currentUser = useCurrentUser()
@@ -34,38 +32,19 @@ export default function TiketPage() {
     [tickets]
   )
 
+  // Sort dipindah sepenuhnya ke WoTable (butuh pinnedIds untuk urutan pin-first + status_order saat default)
   const filtered = useMemo(() => {
-    const rows = tickets.filter((row) => {
+    return tickets.filter((row) => {
       const matchSearch =
         search.trim() === '' ||
         row.incident.toLowerCase().includes(search.toLowerCase()) ||
         (row.customer_name ?? '').toLowerCase().includes(search.toLowerCase())
       const matchStatus = statusFilter === 'ALL' || row.status === statusFilter
-      const matchArea = areaFilter === 'ALL' || row.service_area === areaFilter
-      const matchRayon = rayonFilter === 'ALL' || row.rayon === rayonFilter
+      const matchArea = areaFilter.length === 0 || (row.service_area && areaFilter.includes(row.service_area))
+      const matchRayon = rayonFilter.length === 0 || (row.rayon && rayonFilter.includes(row.rayon))
       return matchSearch && matchStatus && matchArea && matchRayon
     })
-
-    if (sortOption.key === 'default') {
-      return [...rows].sort((a, b) => a.status_order - b.status_order)
-    }
-
-    if (sortOption.key === 'ttr') {
-      const sorted = [...rows].sort((a, b) => {
-        const av = getTTRSeconds(a.reported_date, a.status, a.updated_at, a.booking_date)
-        const bv = getTTRSeconds(b.reported_date, b.status, b.updated_at, b.booking_date)
-        return av - bv
-      })
-      return sortOption.dir === 'asc' ? sorted : sorted.reverse()
-    }
-
-    const sorted = [...rows].sort((a, b) => {
-      const av = String(a[sortOption.key as keyof WoTicketWithCity] ?? '').toLowerCase()
-      const bv = String(b[sortOption.key as keyof WoTicketWithCity] ?? '').toLowerCase()
-      return av.localeCompare(bv, 'id', { numeric: true })
-    })
-    return sortOption.dir === 'asc' ? sorted : sorted.reverse()
-  }, [tickets, search, statusFilter, areaFilter, rayonFilter, sortOption])
+  }, [tickets, search, statusFilter, areaFilter, rayonFilter])
 
   const selectedTicket = selected
     ? tickets.find((t) => t.id === selected.id && t._kota === selected._kota) ?? null
@@ -95,8 +74,6 @@ export default function TiketPage() {
           rayonOptions={rayonOptions}
           rayonFilter={rayonFilter}
           onRayonFilterChange={setRayonFilter}
-          sortOption={sortOption}
-          onSortOptionChange={setSortOption}
         />
       </div>
 
@@ -105,6 +82,8 @@ export default function TiketPage() {
           data={filtered}
           onRowClick={(item) => setSelected(item as WoTicketWithCity)}
           pinnedIds={pinnedIds}
+          sortOption={sortOption}
+          onSortOptionChange={setSortOption}
         />
       </div>
 
