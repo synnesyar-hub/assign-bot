@@ -127,6 +127,12 @@ export function formatManjaCountdown(bookingDate: string | null): { text: string
   return { text: formatHms(diffMs), overdue: false }
 }
 
+export function getManjaSeconds(bookingDate: string | null): number {
+  if (!bookingDate) return Number.POSITIVE_INFINITY // tanpa booking_date, taruh di akhir
+  const target = new Date(bookingDate).getTime()
+  return (target - Date.now()) / 1000
+}
+
 function formatHms(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000)
   const hours = Math.floor(totalSeconds / 3600)

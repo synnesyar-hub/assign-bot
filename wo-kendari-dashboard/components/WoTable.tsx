@@ -5,10 +5,10 @@ import { useState, useRef, useEffect } from 'react'
 import EmptyState from '@/components/EmptyState'
 import { WoKendari, COLUMN_DEFS, ACTIVE_STATUSES, SortOption } from '@/lib/types'
 import { statusColor } from '@/lib/statusStyle'
-import { formatTTR, formatManjaCountdown, getTTRColorClass, getTTRSeconds } from '@/lib/timeUtils'
+import { formatTTR, formatManjaCountdown, getTTRColorClass, getTTRSeconds, getManjaSeconds } from '@/lib/timeUtils'
 import { useNow } from '@/lib/useNow'
 
-const NON_SORTABLE_KEYS = ['status', 'ttr_manja']
+const NON_SORTABLE_KEYS: string[] = [] // semua kolom sekarang sortable
 
 const STICKY_KEYS = ['incident', 'reported_date', 'ttr', 'customer_type_label', 'service_no']
 const STICKY_WIDTHS: Record<string, number> = {
@@ -56,12 +56,14 @@ function SortHeaderDropdown({
   colKey,
   colLabel,
   isNumeric,
+  isStatusOrder,
   sortOption,
   onSortOptionChange,
 }: {
   colKey: string
   colLabel: string
   isNumeric: boolean
+  isStatusOrder: boolean
   sortOption: SortOption
   onSortOptionChange: (v: SortOption) => void
 }) {
@@ -77,8 +79,8 @@ function SortHeaderDropdown({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const ascLabel = isNumeric ? 'Terendah' : 'A-Z'
-  const descLabel = isNumeric ? 'Tertinggi' : 'Z-A'
+  const ascLabel = isStatusOrder ? 'Open - Close' : isNumeric ? 'Terendah' : 'A-Z'
+  const descLabel = isStatusOrder ? 'Close - Open' : isNumeric ? 'Tertinggi' : 'Z-A'
 
   const choose = (dir: 'asc' | 'desc') => {
     onSortOptionChange({ key: colKey, dir })
@@ -166,6 +168,14 @@ export default function WoTable({ data, onRowClick, pinnedIds, sortOption, onSor
         const bv = getTTRSeconds(b.reported_date, b.status, b.updated_at, b.booking_date)
         return av - bv
       }
+      if (sortOption.key === 'ttr_manja') {
+        const av = getManjaSeconds(a.booking_date)
+        const bv = getManjaSeconds(b.booking_date)
+        return av - bv
+      }
+      if (sortOption.key === 'status') {
+        return a.status_order - b.status_order
+      }
       const av = String(a[sortOption.key as keyof WoKendari] ?? '').toLowerCase()
       const bv = String(b[sortOption.key as keyof WoKendari] ?? '').toLowerCase()
       return av.localeCompare(bv, 'id', { numeric: true })
@@ -210,7 +220,8 @@ export default function WoTable({ data, onRowClick, pinnedIds, sortOption, onSor
                     <SortHeaderDropdown
                       colKey={col.key}
                       colLabel={col.label}
-                      isNumeric={col.key === 'ttr'}
+                      isNumeric={col.key === 'ttr' || col.key === 'ttr_manja'}
+                      isStatusOrder={col.key === 'status'}
                       sortOption={sortOption}
                       onSortOptionChange={onSortOptionChange}
                     />
