@@ -2,13 +2,16 @@
 
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { syncKendalaForKota } from '@/lib/syncKendala'
+import { CityKey } from '@/lib/types'
 
 interface RecapButtonProps {
   syncFn: string
+  kota: CityKey
   onDone: () => void
 }
 
-export default function RecapButton({ syncFn, onDone }: RecapButtonProps) {
+export default function RecapButton({ syncFn, kota, onDone }: RecapButtonProps) {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<string | null>(null)
 
@@ -18,13 +21,29 @@ export default function RecapButton({ syncFn, onDone }: RecapButtonProps) {
 
     const { data, error } = await supabase.rpc(syncFn)
 
-    setLoading(false)
-
     if (error) {
+      setLoading(false)
       setResult(`Gagal rekap: ${error.message}`)
       return
     }
 
+    try {
+      await syncKendalaForKota(supabase, kota)
+    } catch (kendalaErr) {
+      setLoading(false)
+      const message =
+       kendalaErr instanceof Error
+         ? kendalaErr.message
+         : typeof kendalaErr === 'object' && kendalaErr !== null && 'message' in kendalaErr
+           ? String((kendalaErr as { message: unknown }).message)
+           : String(kendalaErr)
+      setResult(`Rekap tiket berhasil, tapi gagal hitung Kendala: ${message}`)
+      onDone()
+      setTimeout(() => setResult(null), 4000)
+      return
+    }
+
+    setLoading(false)
     setResult(`Berhasil, ${data ?? 0} tiket disinkronkan.`)
     onDone()
 

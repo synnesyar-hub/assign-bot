@@ -15,10 +15,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="id" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="flex min-h-full bg-[var(--background)] font-sans">
+      <body className="flex h-screen overflow-hidden bg-[var(--background)] font-sans">
         <PresenceProvider>
           <Sidebar />
-          <div className="flex-1">{children}</div>
+          <div className="h-full flex-1 overflow-hidden">{children}</div>
         </PresenceProvider>
       </body>
     </html>

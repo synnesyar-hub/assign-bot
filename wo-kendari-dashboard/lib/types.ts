@@ -53,13 +53,13 @@ export interface WoKendari {
   odc: string | null
   service_area: string | null
   booking_date: string | null
+  kendala: string | null
 
   // ===== MANUAL - CAMPUR TANGAN OPERATOR (editable) =====
   status: WoStatus
   status_order: number
 
   // ===== MANUAL PENUH (editable) =====
-  kendala: string | null
   teknisi: string | null
   perbaikan: string | null
   link_alamat: string | null
@@ -81,7 +81,6 @@ export interface WoKendari {
 // Daftar kolom yang boleh diedit langsung di grid
 export const EDITABLE_COLUMNS: (keyof WoKendari)[] = [
   'status',
-  'kendala',
   'teknisi',
   'perbaikan',
   'link_alamat',
@@ -115,8 +114,8 @@ export const COLUMN_DEFS: ColumnDef[] = [
   { key: 'service_area', label: 'Area Layanan', editable: false, type: 'readonly', width: 'min-w-[120px]' },
   { key: 'booking_date', label: 'Tgl Booking', editable: false, type: 'date', width: 'min-w-[140px]' },
   { key: 'ttr_manja', label: 'TTR Manja', editable: false, type: 'ttr_manja', width: 'min-w-[110px]' },
+  { key: 'kendala', label: 'Kendala', editable: false, type: 'readonly', width: 'min-w-[180px]' },
   { key: 'status', label: 'Status', editable: true, type: 'status', width: 'min-w-[160px]' },
-  { key: 'kendala', label: 'Kendala', editable: true, type: 'text', width: 'min-w-[180px]' },
   { key: 'teknisi', label: 'Teknisi', editable: true, type: 'text', width: 'min-w-[120px]' },
   { key: 'perbaikan', label: 'Perbaikan', editable: true, type: 'text', width: 'min-w-[180px]' },
   { key: 'link_alamat', label: 'Link Alamat', editable: true, type: 'text', width: 'min-w-[160px]' },
@@ -125,6 +124,22 @@ export const COLUMN_DEFS: ColumnDef[] = [
   { key: 'status_ttr', label: 'Status TTR', editable: true, type: 'text', width: 'min-w-[120px]' },
   { key: 'job', label: 'Job', editable: true, type: 'text', width: 'min-w-[100px]' },
   { key: 'total', label: 'Total', editable: true, type: 'text', width: 'min-w-[100px]' },
+]
+
+export interface SortOption {
+  key: string
+  dir: 'asc' | 'desc'
+  label: string
+}
+
+export const SORT_OPTIONS: SortOption[] = [
+  { key: 'default', dir: 'asc', label: 'Default' },
+  { key: 'reported_date', dir: 'desc', label: 'Tanggal Lapor (Terbaru)' },
+  { key: 'reported_date', dir: 'asc', label: 'Tanggal Lapor (Terlama)' },
+  { key: 'ttr', dir: 'desc', label: 'TTR (Tertinggi)' },
+  { key: 'ttr', dir: 'asc', label: 'TTR (Terendah)' },
+  { key: 'customer_name', dir: 'asc', label: 'Nama Pelanggan (A-Z)' },
+  { key: 'customer_name', dir: 'desc', label: 'Nama Pelanggan (Z-A)' },
 ]
 
 export const ALL_STATUSES: WoStatus[] = [

@@ -195,8 +195,8 @@ export default function IncidentDetailPanel({
 
   return (
     <>
-      <div className="fixed inset-0 z-20 bg-black/20" onClick={onClose} />
-      <div className="fixed right-0 top-0 z-30 h-full w-full max-w-md overflow-y-auto bg-white shadow-xl">
+      <div className="fixed inset-0 z-[35] bg-black/20" onClick={onClose} />
+      <div className="fixed right-0 top-0 z-40 h-full w-full max-w-md overflow-y-auto bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
           <div>
             <p className="text-xs text-gray-400">Detail Tiket</p>
@@ -271,6 +271,7 @@ export default function IncidentDetailPanel({
             <Field label="No. Layanan" value={item.service_no} />
             <Field label="Rayon" value={item.rayon} />
             <Field label="STO / ODC" value={`${item.sto ?? '-'} / ${item.odc ?? '-'}`} />
+            <Field label="Kendala" value={item.kendala} />
             <div>
               <p className="text-[11px] font-bold uppercase tracking-wide text-gray-600">TTR</p>
               <p className={`mt-0.5 font-mono text-sm font-semibold ${ttrColorClass}`}>{ttrText}</p>
@@ -289,7 +290,6 @@ export default function IncidentDetailPanel({
             </p>
             <div className="space-y-4">
               <EditableField label="Teknisi" value={item.teknisi} column="teknisi" ticketId={item.id} table={table} currentUser={currentUser} onSaved={handleSaved} locked={fieldsLocked} onLockedFocusAttempt={() => setShowGuard(true)} />
-              <EditableField label="Kendala" value={item.kendala} column="kendala" ticketId={item.id} table={table} currentUser={currentUser} onSaved={handleSaved} locked={fieldsLocked} onLockedFocusAttempt={() => setShowGuard(true)} />
               <EditableField label="Perbaikan" value={item.perbaikan} column="perbaikan" ticketId={item.id} table={table} currentUser={currentUser} onSaved={handleSaved} locked={fieldsLocked} onLockedFocusAttempt={() => setShowGuard(true)} />
               <EditableField label="Kategori TTR" value={item.kategori_ttr} column="kategori_ttr" ticketId={item.id} table={table} currentUser={currentUser} onSaved={handleSaved} locked={fieldsLocked} onLockedFocusAttempt={() => setShowGuard(true)} />
               <EditableField label="Status TTR" value={item.status_ttr} column="status_ttr" ticketId={item.id} table={table} currentUser={currentUser} onSaved={handleSaved} locked={fieldsLocked} onLockedFocusAttempt={() => setShowGuard(true)} />

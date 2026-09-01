@@ -1,3 +1,5 @@
+import { WoStatus } from './types'
+
 export function getAgeInHours(reportedDate: string | null): number {
   if (!reportedDate) return 0
   const reported = new Date(reportedDate).getTime()
@@ -72,6 +74,19 @@ export function formatTTR(
 
   const diffMs = Math.max(0, end - start)
   return formatHms(diffMs)
+}
+
+export function getTTRSeconds(
+  reportedDate: string | null,
+  status: WoStatus,
+  updatedAt: string | null,
+  bookingDate: string | null
+): number {
+  const str = formatTTR(reportedDate, status, updatedAt, bookingDate)
+  const parts = str.split(':').map((p) => parseInt(p, 10))
+  if (parts.length !== 3 || parts.some((p) => isNaN(p))) return 0
+  const [h, m, s] = parts
+  return h * 3600 + m * 60 + s
 }
 
 export function getTTRColorClass(

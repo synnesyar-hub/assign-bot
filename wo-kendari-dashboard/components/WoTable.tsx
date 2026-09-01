@@ -6,6 +6,21 @@ import { statusColor } from '@/lib/statusStyle'
 import { formatTTR, formatManjaCountdown, getTTRColorClass } from '@/lib/timeUtils'
 import { useNow } from '@/lib/useNow'
 
+const STICKY_KEYS = ['incident', 'reported_date', 'ttr', 'customer_type_label', 'service_no']
+const STICKY_WIDTHS: Record<string, number> = {
+  incident: 120,
+  reported_date: 140,
+  ttr: 110,
+  customer_type_label: 120,
+  service_no: 120,
+}
+
+function getStickyOffset(key: string): number | null {
+  const idx = STICKY_KEYS.indexOf(key)
+  if (idx === -1) return null
+  return STICKY_KEYS.slice(0, idx).reduce((sum, k) => sum + STICKY_WIDTHS[k], 0)
+}
+
 function formatCell(value: unknown, type: string): string {
   if (value === null || value === undefined || value === '') return '-'
   if (type === 'date') {
@@ -42,20 +57,16 @@ interface TableProps {
 export default function WoTable({ data, onRowClick, pinnedIds }: TableProps) {
   const now = useNow() // ikut serta supaya kolom TTR/TTR Manja re-render tiap detik
 
+  // Stable sort: hanya menaikkan baris yang di-pin ke atas, urutan lain
+  // mengikuti array `data` apa adanya (sudah di-sort dari page.tsx)
   const sortWithPin = (a: WoKendari, b: WoKendari) => {
     const aPinned = pinnedIds.has(a.id) ? 1 : 0
     const bPinned = pinnedIds.has(b.id) ? 1 : 0
-    if (aPinned !== bPinned) return bPinned - aPinned
-    return a.status_order - b.status_order
+    return bPinned - aPinned
   }
 
-  const active = data
-    .filter((d) => ACTIVE_STATUSES.includes(d.status))
-    .sort(sortWithPin)
-
-  const inactive = data
-    .filter((d) => !ACTIVE_STATUSES.includes(d.status))
-    .sort(sortWithPin)
+  const active = data.filter((d) => ACTIVE_STATUSES.includes(d.status)).sort(sortWithPin)
+  const inactive = data.filter((d) => !ACTIVE_STATUSES.includes(d.status)).sort(sortWithPin)
 
   if (data.length === 0) {
     return (
@@ -67,18 +78,29 @@ export default function WoTable({ data, onRowClick, pinnedIds }: TableProps) {
   }
 
   return (
-    <div className="h-[calc(100vh-220px)] overflow-auto rounded-xl border border-gray-200 bg-white shadow-sm">
-      <table className="min-w-full border-collapse text-sm">
-        <thead className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50">
+    <div className="h-full overflow-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+      <table className="min-w-full border-separate border-spacing-0 text-sm">
+        <thead className="sticky top-0 z-30 border-b border-gray-200 bg-gray-50">
           <tr>
-            {COLUMN_DEFS.map((col) => (
-              <th
-                key={col.key}
-                className={`whitespace-nowrap border-r border-gray-100 px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wide text-gray-700 ${col.width ?? ''}`}
-              >
-                {col.label}
-              </th>
-            ))}
+            {COLUMN_DEFS.map((col) => {
+              const stickyOffset = getStickyOffset(col.key)
+              const isSticky = stickyOffset !== null
+              return (
+                <th
+                  key={col.key}
+                  style={
+                    isSticky
+                      ? { position: 'sticky', left: stickyOffset, zIndex: 40, width: STICKY_WIDTHS[col.key] }
+                      : undefined
+                  }
+                  className={`whitespace-nowrap border-r border-gray-100 px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wide text-gray-700 ${col.width ?? ''} ${
+                    isSticky ? 'bg-gray-50' : ''
+                  }`}
+                >
+                  {col.label}
+                </th>
+              )
+            })}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -124,6 +146,12 @@ function RowItem({
     ? { backgroundColor: `${row.bookmark_color ?? '#ef4444'}1A` }
     : undefined
 
+  const stickyBgForRow = row.bookmarked_by
+   ? ''
+   : isPinned
+    ? 'bg-amber-50/60'
+     : 'bg-white'
+
   return (
     <tr
       onClick={onClick}
@@ -131,9 +159,16 @@ function RowItem({
       className={`cursor-pointer hover:bg-gray-50 ${!row.bookmarked_by && isPinned ? 'bg-amber-50/60' : ''}`}
     >
       {COLUMN_DEFS.map((col) => {
+        const stickyOffset = getStickyOffset(col.key)
+        const isSticky = stickyOffset !== null
+        const stickyStyle = isSticky
+          ? { position: 'sticky' as const, left: stickyOffset, zIndex: 20, width: STICKY_WIDTHS[col.key] }
+          : undefined
+        const stickyBg = isSticky ? stickyBgForRow : ''
+
         if (col.type === 'status') {
           return (
-            <td key={col.key} className="border-r border-gray-100 px-3 py-2">
+            <td key={col.key} style={stickyStyle} className={`border-r border-gray-100 px-3 py-2 ${stickyBg}`}>
               <span className={`inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusColor[row.status]}`}>
                 {row.status}
               </span>
@@ -143,7 +178,7 @@ function RowItem({
 
         if (col.key === 'incident') {
           return (
-            <td key={col.key} className="border-r border-gray-100 px-3 py-2 text-gray-800">
+            <td key={col.key} style={stickyStyle} className={`border-r border-gray-100 px-3 py-2 text-gray-800 ${stickyBg}`}>
               <span className="flex max-w-[220px] items-center gap-1.5 truncate">
                 {isPinned && <PinIconSmall />}
                 {row.bookmarked_by && <BookmarkIconSmall color={row.bookmark_color ?? '#ef4444'} />}
@@ -158,7 +193,8 @@ function RowItem({
           return (
             <td
               key={col.key}
-              className={`border-r border-gray-100 px-3 py-2 font-mono text-xs font-semibold ${getTTRColorClass(row.reported_date, row.status, row.updated_at, row.booking_date)}`}
+              style={stickyStyle}
+              className={`border-r border-gray-100 px-3 py-2 font-mono text-xs font-semibold ${stickyBg} ${getTTRColorClass(row.reported_date, row.status, row.updated_at, row.booking_date)}`}
             >
               {formatTTR(row.reported_date, row.status, row.updated_at, row.booking_date)}
             </td>
@@ -171,7 +207,8 @@ function RowItem({
           return (
             <td
               key={col.key}
-              className={`border-r border-gray-100 px-3 py-2 font-mono text-xs font-semibold ${overdue ? 'text-red-600' : 'text-blue-700'}`}
+              style={stickyStyle}
+              className={`border-r border-gray-100 px-3 py-2 font-mono text-xs font-semibold ${stickyBg} ${overdue ? 'text-red-600' : 'text-blue-700'}`}
             >
               {text}
             </td>
@@ -182,7 +219,8 @@ function RowItem({
         return (
           <td
             key={col.key}
-            className={`border-r border-gray-100 px-3 py-2 text-gray-800 ${col.editable ? 'cursor-text hover:bg-blue-50' : 'text-gray-600'}`}
+            style={stickyStyle}
+            className={`border-r border-gray-100 px-3 py-2 text-gray-800 ${stickyBg} ${col.editable ? 'cursor-text hover:bg-blue-50' : 'text-gray-600'}`}
           >
             <span className="block max-w-[220px] truncate">{formatCell(value, col.type)}</span>
           </td>
