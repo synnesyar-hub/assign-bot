@@ -5,16 +5,17 @@ import { useState, useRef, useEffect } from 'react'
 import EmptyState from '@/components/EmptyState'
 import { WoKendari, COLUMN_DEFS, ACTIVE_STATUSES, SortOption } from '@/lib/types'
 import { statusColor } from '@/lib/statusStyle'
+import { getRayonColor, getRayonTextColor } from '@/lib/rayonColor'
 import { formatTTR, formatManjaCountdown, getTTRColorClass, getTTRSeconds, getManjaSeconds } from '@/lib/timeUtils'
 import { useNow } from '@/lib/useNow'
 
 const NON_SORTABLE_KEYS: string[] = [] // semua kolom sekarang sortable
 
-const STICKY_KEYS = ['incident', 'reported_date', 'ttr', 'customer_type_label', 'service_no']
+const STICKY_KEYS = ['incident', 'reported_date', 'booking_date', 'customer_type_label', 'service_no']
 const STICKY_WIDTHS: Record<string, number> = {
   incident: 120,
   reported_date: 140,
-  ttr: 110,
+  booking_date: 140,
   customer_type_label: 120,
   service_no: 120,
 }
@@ -357,6 +358,22 @@ function RowItem({
               className={`border-r border-gray-100 px-3 py-2 font-mono text-xs font-semibold ${stickyBg} ${overdue ? 'text-red-600' : 'text-blue-700'}`}
             >
               {text}
+            </td>
+          )
+        }
+
+        if (col.key === 'rayon') {
+          return (
+            <td key={col.key} style={stickyStyle} className={`border-r border-gray-100 px-3 py-2 ${stickyBg}`}>
+              <span className="flex items-center gap-1.5 truncate">
+                <span
+                  className="inline-block h-2 w-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: getRayonColor(row.rayon) }}
+                />
+                <span className="truncate font-medium" style={{ color: getRayonTextColor(row.rayon) }}>
+                  {formatCell(row.rayon, 'readonly')}
+                </span>
+              </span>
             </td>
           )
         }

@@ -102,7 +102,7 @@ export interface ColumnDef {
 export const COLUMN_DEFS: ColumnDef[] = [
   { key: 'incident', label: 'Incident', editable: false, type: 'readonly', width: 'min-w-[120px]' },
   { key: 'reported_date', label: 'Tanggal Lapor', editable: false, type: 'date', width: 'min-w-[140px]' },
-  { key: 'ttr', label: 'TTR', editable: false, type: 'ttr', width: 'min-w-[110px]' },
+  { key: 'booking_date', label: 'Tgl Booking', editable: false, type: 'date', width: 'min-w-[140px]' },
   { key: 'customer_type_label', label: 'Tipe Pelanggan', editable: false, type: 'readonly', width: 'min-w-[120px]' },
   { key: 'service_no', label: 'No. Layanan', editable: false, type: 'readonly', width: 'min-w-[120px]' },
   { key: 'customer_name', label: 'Nama Pelanggan', editable: false, type: 'readonly', width: 'min-w-[160px]' },
@@ -112,7 +112,7 @@ export const COLUMN_DEFS: ColumnDef[] = [
   { key: 'sto', label: 'STO', editable: false, type: 'readonly', width: 'min-w-[80px]' },
   { key: 'odc', label: 'ODC', editable: false, type: 'readonly', width: 'min-w-[100px]' },
   { key: 'service_area', label: 'Area Layanan', editable: false, type: 'readonly', width: 'min-w-[120px]' },
-  { key: 'booking_date', label: 'Tgl Booking', editable: false, type: 'date', width: 'min-w-[140px]' },
+  { key: 'ttr', label: 'TTR', editable: false, type: 'ttr', width: 'min-w-[110px]' },
   { key: 'ttr_manja', label: 'TTR Manja', editable: false, type: 'ttr_manja', width: 'min-w-[110px]' },
   { key: 'kendala', label: 'Kendala', editable: false, type: 'readonly', width: 'min-w-[180px]' },
   { key: 'status', label: 'Status', editable: true, type: 'status', width: 'min-w-[160px]' },
