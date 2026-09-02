@@ -4,7 +4,7 @@ import asyncio
 from .modal import modal_handler, modal_confirm
 from services.db_service import update_ticket_fields, sync_tickets, get_all_incs
 from insera.ticket_list import fetch_ticket_list_paginated
-from config import INS_TICKET_LIST_URL_1, INS_TICKET_LIST_URL_2, INS_TICKET_LIST_URL_3, INS_URL, INS_USERNAME
+from config import INS_TICKET_LIST_URL_1, INS_TICKET_LIST_URL_2, INS_TICKET_LIST_URL_3, INS_TICKET_LIST_URL_4, INS_TICKET_LIST_URL_5, INS_URL, INS_USERNAME
 
 
 class TicketNotFoundError(Exception):
@@ -36,8 +36,19 @@ BOOKMARK_CONFIG = {
         "table_id": "datalistGlobal",
         "worksheet": "Database3",
     },
+    "bookmark4": {
+        "url": INS_TICKET_LIST_URL_4,   
+        "page_prefix": "d-6878233",
+        "table_id": "datalistGlobal",
+        "worksheet": "Database4",
+    },
+    "bookmark5": {
+        "url": INS_TICKET_LIST_URL_5,   
+        "page_prefix": "d-6878233",
+        "table_id": "datalistGlobal",
+        "worksheet": "Database5",
+    },
 }
-
 
 async def goto_with_retry(page, url, retries=3, timeout=60000, wait_between=3000, wait_until="load"):
 
@@ -184,6 +195,14 @@ async def fetch_bookmark3(page):
     cfg = BOOKMARK_CONFIG["bookmark3"]
     return await fetch_and_sync(page, cfg["url"], cfg["page_prefix"], cfg["table_id"], cfg["worksheet"])
 
+
+async def fetch_bookmark4(page):
+    cfg = BOOKMARK_CONFIG["bookmark4"]
+    return await fetch_and_sync(page, cfg["url"], cfg["page_prefix"], cfg["table_id"], cfg["worksheet"])
+
+async def fetch_bookmark5(page):
+    cfg = BOOKMARK_CONFIG["bookmark5"]
+    return await fetch_and_sync(page, cfg["url"], cfg["page_prefix"], cfg["table_id"], cfg["worksheet"])
 
 fetch_and_store_bookmark2 = fetch_bookmark2
 

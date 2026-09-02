@@ -14,6 +14,8 @@ WORKSHEET_TABLE_MAP = {
     "Database": "tickets_database",
     "Database2": "tickets_database2",
     "Database3": "tickets_database3",
+    "Database4": "tickets_database4",
+    "Database5": "tickets_database5",
 }
 
 COLUMN_MAP = {

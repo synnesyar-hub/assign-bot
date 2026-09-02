@@ -12,6 +12,8 @@ from automation.auto_resolve import (
     fetch_bookmark1,
     fetch_bookmark2,
     fetch_bookmark3,
+    fetch_bookmark4, 
+    fetch_bookmark5,
     fetch_and_sync_parallel,
     BOOKMARK_CONFIG,
     process_ticket_batch_bot1,
@@ -24,9 +26,12 @@ from automation.auto_resolve import (
 )
 
 # Scrape (True/False, tinggal ganti sesuai kebutuhan)
-RUN_SCRAPE_BOOKMARK1 = True    # -> Database
-RUN_SCRAPE_BOOKMARK2 = True   # -> Database2
+RUN_SCRAPE_BOOKMARK1 = False    # -> Database
+RUN_SCRAPE_BOOKMARK2 = False   # -> Database2
 RUN_SCRAPE_BOOKMARK3 = False   # -> Database3 (sekuensial biasa)
+
+RUN_SCRAPE_BOOKMARK4 = True    # -> Database4 (SQM)
+RUN_SCRAPE_BOOKMARK5 = True    # -> Database5 (UNSPEC)
 
 # Scrape paralel khusus Bookmark 3 -- kalau True, RUN_SCRAPE_BOOKMARK3 di
 # atas diabaikan (pakai yang paralel ini saja).
@@ -187,6 +192,14 @@ async def main():
         elif RUN_SCRAPE_BOOKMARK3:
             print("\n=== Sync Bookmark 3 -> Database3 ===")
             await fetch_bookmark3(page)
+
+        if RUN_SCRAPE_BOOKMARK4:
+            print("\n=== Sync Bookmark 4 -> Database4 (SQM) ===")
+            await fetch_bookmark4(page)
+
+        if RUN_SCRAPE_BOOKMARK5:
+            print("\n=== Sync Bookmark 5 -> Database5 (UNSPEC) ===")
+            await fetch_bookmark5(page)
 
         if RUN_DEBUG_COMPARE_SHEET_VS_SCRAPE:
             cfg = BOOKMARK_CONFIG["bookmark3"]
