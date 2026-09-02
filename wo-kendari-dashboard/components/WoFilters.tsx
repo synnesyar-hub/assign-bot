@@ -20,6 +20,9 @@ interface Props {
   rayonOptions: string[]
   rayonFilter: string[]
   onRayonFilterChange: (v: string[]) => void
+  sourceOptions: string[]           
+  sourceFilter: string[]            
+  onSourceFilterChange: (v: string[]) => void   
 }
 
 function MultiSelectDropdown({
@@ -109,6 +112,7 @@ export default function WoFilters({
   statusFilter, onStatusFilterChange,
   areaOptions, areaFilter, onAreaFilterChange,
   rayonOptions, rayonFilter, onRayonFilterChange,
+  sourceOptions, sourceFilter, onSourceFilterChange,
 }: Props) {
 
   return (
@@ -135,7 +139,7 @@ export default function WoFilters({
 
         <MultiSelectDropdown label="Area" options={areaOptions} selected={areaFilter} onChange={onAreaFilterChange} />
         <MultiSelectDropdown label="Rayon" options={rayonOptions} selected={rayonFilter} onChange={onRayonFilterChange} />
-
+        <MultiSelectDropdown label="Source" options={sourceOptions} selected={sourceFilter} onChange={onSourceFilterChange} />
       </div>
     </div>
   )

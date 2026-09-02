@@ -17,6 +17,7 @@ export default function TiketPage() {
   const [statusFilter, setStatusFilter] = useState<WoStatus | 'ALL'>('ALL')
   const [areaFilter, setAreaFilter] = useState<string[]>([]) // service_area, kosong = semua
   const [rayonFilter, setRayonFilter] = useState<string[]>([]) // rayon, kosong = semua
+  const [sourceFilter, setSourceFilter] = useState<string[]>([]) // source, kosong = semua
   const [sortHistory, setSortHistory] = useState<SortOption[]>([]) // kosong = default
   const [selected, setSelected] = useState<WoTicketWithCity | null>(null)
   const currentUser = useCurrentUser()
@@ -32,6 +33,11 @@ export default function TiketPage() {
     [tickets]
   )
 
+  const sourceOptions = useMemo(
+    () => Array.from(new Set(tickets.map((d) => d.source).filter(Boolean))) as string[],
+    [tickets]
+  )
+
   // Sort dilakukan sepenuhnya di WoTable (butuh pinnedIds + status_order)
   const filtered = useMemo(() => {
     return tickets.filter((row) => {
@@ -42,9 +48,10 @@ export default function TiketPage() {
       const matchStatus = statusFilter === 'ALL' || row.status === statusFilter
       const matchArea = areaFilter.length === 0 || (row.service_area && areaFilter.includes(row.service_area))
       const matchRayon = rayonFilter.length === 0 || (row.rayon && rayonFilter.includes(row.rayon))
-      return matchSearch && matchStatus && matchArea && matchRayon
+      const matchSource = sourceFilter.length === 0 || (row.source && sourceFilter.includes(row.source))
+      return matchSearch && matchStatus && matchArea && matchRayon && matchSource
     })
-  }, [tickets, search, statusFilter, areaFilter, rayonFilter])
+  }, [tickets, search, statusFilter, areaFilter, rayonFilter, sourceFilter])
 
   const selectedTicket = selected
     ? tickets.find((t) => t.id === selected.id && t._kota === selected._kota) ?? null
@@ -74,6 +81,9 @@ export default function TiketPage() {
           rayonOptions={rayonOptions}
           rayonFilter={rayonFilter}
           onRayonFilterChange={setRayonFilter}
+          sourceOptions={sourceOptions}
+          sourceFilter={sourceFilter}
+          onSourceFilterChange={setSourceFilter}
         />
       </div>
 

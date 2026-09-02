@@ -47,6 +47,7 @@ export interface WoKendari {
   service_no: string | null
   customer_name: string | null
   contact_phone: string | null
+  source: string | null
   datek: string | null
   rayon: string | null
   sto: string | null
@@ -63,7 +64,6 @@ export interface WoKendari {
   teknisi: string | null
   perbaikan: string | null
   link_alamat: string | null
-  source: string | null
   kategori_ttr: string | null
   status_ttr: string | null
   job: string | null
@@ -84,7 +84,6 @@ export const EDITABLE_COLUMNS: (keyof WoKendari)[] = [
   'teknisi',
   'perbaikan',
   'link_alamat',
-  'source',
   'kategori_ttr',
   'status_ttr',
   'job',
@@ -107,6 +106,7 @@ export const COLUMN_DEFS: ColumnDef[] = [
   { key: 'service_no', label: 'No. Layanan', editable: false, type: 'readonly', width: 'min-w-[120px]' },
   { key: 'customer_name', label: 'Nama Pelanggan', editable: false, type: 'readonly', width: 'min-w-[160px]' },
   { key: 'contact_phone', label: 'No. HP', editable: false, type: 'readonly', width: 'min-w-[120px]' },
+  { key: 'source', label: 'Source', editable: false, type: 'readonly', width: 'min-w-[110px]' },  // <-- dipindah + jadi readonly
   { key: 'datek', label: 'Datek', editable: false, type: 'readonly', width: 'min-w-[100px]' },
   { key: 'rayon', label: 'Rayon', editable: false, type: 'readonly', width: 'min-w-[120px]' },
   { key: 'sto', label: 'STO', editable: false, type: 'readonly', width: 'min-w-[80px]' },
@@ -119,7 +119,6 @@ export const COLUMN_DEFS: ColumnDef[] = [
   { key: 'teknisi', label: 'Teknisi', editable: true, type: 'text', width: 'min-w-[120px]' },
   { key: 'perbaikan', label: 'Perbaikan', editable: true, type: 'text', width: 'min-w-[180px]' },
   { key: 'link_alamat', label: 'Link Alamat', editable: true, type: 'text', width: 'min-w-[160px]' },
-  { key: 'source', label: 'Source', editable: true, type: 'text', width: 'min-w-[100px]' },
   { key: 'kategori_ttr', label: 'Kategori TTR', editable: true, type: 'text', width: 'min-w-[120px]' },
   { key: 'status_ttr', label: 'Status TTR', editable: true, type: 'text', width: 'min-w-[120px]' },
   { key: 'job', label: 'Job', editable: true, type: 'text', width: 'min-w-[100px]' },

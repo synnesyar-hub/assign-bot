@@ -267,7 +267,7 @@ export default function IncidentDetailPanel({
           <div className="grid grid-cols-2 gap-4">
             <Field label="Nama Pelanggan" value={item.customer_name} />
             <Field label="No. HP" value={item.contact_phone} />
-            <Field label="Tipe Pelanggan" value={item.customer_type} />
+            <Field label="Tipe Pelanggan" value={item.customer_type_label} />
             <Field label="No. Layanan" value={item.service_no} />
             <Field label="Rayon" value={item.rayon} />
             <Field label="STO / ODC" value={`${item.sto ?? '-'} / ${item.odc ?? '-'}`} />
