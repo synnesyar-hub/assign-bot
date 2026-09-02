@@ -7,6 +7,7 @@ import { WoKendari, COLUMN_DEFS, ACTIVE_STATUSES, SortOption } from '@/lib/types
 import { statusColor } from '@/lib/statusStyle'
 import { getRayonColor, getRayonTextColor } from '@/lib/rayonColor'
 import { formatTTR, formatManjaCountdown, getTTRColorClass, getTTRSeconds, getManjaSeconds } from '@/lib/timeUtils'
+import { getCustomerTypeBg, getCustomerTypeText } from '@/lib/customerTypeColor'
 import { useNow } from '@/lib/useNow'
 
 const NON_SORTABLE_KEYS: string[] = [] // semua kolom sekarang sortable
@@ -373,6 +374,22 @@ function RowItem({
                 <span className="truncate font-medium" style={{ color: getRayonTextColor(row.rayon) }}>
                   {formatCell(row.rayon, 'readonly')}
                 </span>
+              </span>
+            </td>
+          )
+        }
+
+        if (col.key === 'customer_type_label') {
+          const bg = getCustomerTypeBg(row.customer_type_label)
+          const text = getCustomerTypeText(row.customer_type_label)
+          return (
+            <td
+              key={col.key}
+              style={{ ...stickyStyle, backgroundColor: bg ?? undefined }}
+              className={`border-r border-gray-100 px-3 py-2 ${bg ? '' : stickyBg}`}
+            >
+              <span className="block truncate font-medium" style={{ color: text ?? undefined }}>
+                {formatCell(row.customer_type_label, 'readonly')}
               </span>
             </td>
           )
