@@ -170,3 +170,19 @@ export function getDailyTrendByStatus(
 
   return result
 }
+
+export function splitDateTime(dateStr: string | null): { date: string; time: string } {
+  if (!dateStr) return { date: '-', time: '' }
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return { date: String(dateStr), time: '' }
+
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const day = pad(d.getDate())
+  const month = pad(d.getMonth() + 1)
+  const year = pad(d.getFullYear() % 100)
+  const hours = pad(d.getHours())
+  const minutes = pad(d.getMinutes())
+  const seconds = pad(d.getSeconds())
+
+  return { date: `${day}/${month}/${year}`, time: `${hours}:${minutes}:${seconds}` }
+}

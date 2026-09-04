@@ -6,18 +6,19 @@ import EmptyState from '@/components/EmptyState'
 import { WoKendari, COLUMN_DEFS, ACTIVE_STATUSES, SortOption } from '@/lib/types'
 import { statusColor } from '@/lib/statusStyle'
 import { getRayonColor, getRayonTextColor } from '@/lib/rayonColor'
-import { formatTTR, formatManjaCountdown, getTTRColorClass, getTTRSeconds, getManjaSeconds } from '@/lib/timeUtils'
+import { formatTTR, formatManjaCountdown, getTTRColorClass, getTTRSeconds, getManjaSeconds, splitDateTime } from '@/lib/timeUtils'
 import { getCustomerTypeBg, getCustomerTypeText } from '@/lib/customerTypeColor'
 import { useNow } from '@/lib/useNow'
+import { stripHtml } from '@/lib/stripHtml'
 
 const NON_SORTABLE_KEYS: string[] = [] // semua kolom sekarang sortable
 
-const STICKY_KEYS = ['incident', 'reported_date', 'booking_date', 'customer_type_label', 'service_no']
+const STICKY_KEYS = ['reported_date', 'booking_date', 'customer_type_label', 'incident', 'service_no']
 const STICKY_WIDTHS: Record<string, number> = {
-  incident: 120,
-  reported_date: 140,
-  booking_date: 140,
+  reported_date: 160,
+  booking_date: 160,
   customer_type_label: 120,
+  incident: 120,
   service_no: 120,
 }
 
@@ -32,7 +33,14 @@ function formatCell(value: unknown, type: string): string {
   if (type === 'date') {
     const d = new Date(value as string)
     if (isNaN(d.getTime())) return String(value)
-    return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const day = pad(d.getDate())
+    const month = pad(d.getMonth() + 1)
+    const year = pad(d.getFullYear() % 100)
+    const hours = pad(d.getHours())
+    const minutes = pad(d.getMinutes())
+    const seconds = pad(d.getSeconds())
+    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`
   }
   return String(value)
 }
@@ -314,6 +322,8 @@ function RowItem({
           : undefined
         const stickyBg = isSticky ? stickyBgForRow : ''
 
+        const value = row[col.key as keyof WoKendari]
+
         if (col.type === 'status') {
           return (
             <td key={col.key} style={stickyStyle} className={`border-r border-gray-100 px-3 py-2 ${stickyBg}`}>
@@ -395,7 +405,46 @@ function RowItem({
           )
         }
 
-        const value = row[col.key as keyof WoKendari]
+        if (col.key === 'log') {
+          const preview = stripHtml(row.log ?? '')
+          const unsynced = row.log_synced === false
+          return (
+            <td key={col.key} style={stickyStyle} className={`border-r border-gray-100 px-3 py-2 ${stickyBg}`}>
+              <span className="flex max-w-[220px] items-center gap-1.5">
+                {unsynced && (
+                  <span
+                    className="inline-block h-2 w-2 shrink-0 rounded-full bg-orange-500"
+                    title={row.log_sync_error ? `Gagal sync: ${row.log_sync_error}` : 'Belum tersinkron ke Insera'}
+                  />
+                )}
+                <span className="truncate text-gray-700">{preview || '-'}</span>
+              </span>
+            </td>
+          )
+        }
+
+        if (col.key === 'last_log') {
+          return (
+            <td key={col.key} style={stickyStyle} className={`border-r border-gray-100 px-3 py-2 ${stickyBg}`}>
+              <span className="block max-w-[200px] truncate text-gray-600">
+                {row.last_log || '-'}
+              </span>
+            </td>
+          )
+        }
+
+        if (col.type === 'date') {
+          const { date, time } = splitDateTime(value as string | null)
+          return (
+            <td key={col.key} style={stickyStyle} className={`border-r border-gray-100 px-3 py-2 ${stickyBg}`}>
+              <div className="leading-tight">
+                <div className="text-xs font-medium text-slate-600">{date}</div>
+                {time && <div className="font-mono text-xs font-semibold text-violet-600">{time}</div>}
+              </div>
+            </td>
+          )
+        }
+
         return (
           <td
             key={col.key}

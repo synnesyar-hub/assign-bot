@@ -1,6 +1,8 @@
 # automation/auto_resolve.py
 
 import asyncio
+import html as html_lib
+import re
 from .modal import modal_handler, modal_confirm
 from services.db_service import update_ticket_fields, sync_tickets, get_all_incs
 from insera.ticket_list import fetch_ticket_list_paginated
@@ -16,6 +18,9 @@ SOLUTION_MAP = {
 }
 
 WORK_ORDER_GRID_ID = "formgrid_child_id_1_ticketUserInformationAfterRunCrud_work_order_form_524313410947936751111_188430514919531537511953153751"
+
+WORK_LOGS_GRID_SELECTOR = "div[name*='work_logs']"
+WORK_LOGS_IFRAME_SELECTOR = "iframe[name*='work_logs']"
 
 BOOKMARK_CONFIG = {
     "bookmark1": {
@@ -1459,3 +1464,111 @@ async def run_bot3_all_worksheets_parallel(pages, worksheet_names=("Database", "
     for ws in worksheet_names:
         all_results[ws] = await run_bot3_worksheet_parallel(pages, ws)
     return all_results
+
+
+def _quill_html_to_typeable_text(raw_html: str) -> str:
+    """Convert Quill's HTML output to plain text safe for character-by-character typing.
+    Formatting (bold/italic/list) is intentionally flattened to plain text, since
+    typing raw tags into Insera's Quill editor would insert them as literal text.
+    """
+    text = raw_html
+    # Line breaks: closing </p>, </li>, and <br> become newlines
+    text = re.sub(r'</p\s*>|</li\s*>|<br\s*/?>', '\n', text, flags=re.IGNORECASE)
+    # Strip all remaining tags (e.g. <p>, <strong>, <em>, <u>, <ol>, <ul>, <li>)
+    text = re.sub(r'<[^>]*>', '', text)
+    # Decode HTML entities (&nbsp;, &amp;, &lt;, etc.)
+    text = html_lib.unescape(text)
+    # Collapse excessive blank lines from nested tag removal, trim each line
+    lines = [line.strip() for line in text.split('\n')]
+    text = '\n'.join(lines).strip('\n')
+    return text
+
+
+async def submit_worklog(page, detail_html, log_type="AGENTNOTE", summary=None, photo_path=None, photo_filename=None, timeout=20000):
+
+    await _dismiss_vex_dialog(page, context_label="submit_worklog (pre-check)")
+
+    add_btn = page.locator(f"{WORK_LOGS_GRID_SELECTOR} a.grid-action-add")
+    await add_btn.wait_for(state="visible", timeout=timeout)
+    await add_btn.click()
+
+    await page.locator(WORK_LOGS_IFRAME_SELECTOR).wait_for(state="attached", timeout=timeout)
+    frame = page.frame_locator(WORK_LOGS_IFRAME_SELECTOR)
+
+    detail_editor = frame.locator("div.ql-editor")
+    await detail_editor.wait_for(state="visible", timeout=timeout)
+
+    # Field baru benar-benar enabled ~2 detik setelah iframe load (lihat
+    # setTimeout 2000ms di script halaman induk) -- beri jeda supaya tidak
+    # mengetik ke field yang masih contenteditable=false / readonly.
+    await page.wait_for_timeout(2500)
+
+    log_type_select = frame.locator("select[name='log_type']")
+    await log_type_select.select_option(log_type)
+
+    # Isi field Summary (readonly dilepas oleh script parent setelah
+    # jeda 2s di atas). Field ini terpisah dari Description/Quill --
+    # HARUS diisi eksplisit, tidak otomatis terisi dari detail_html.
+    if summary:
+        summary_field = frame.locator("#summary")
+        await summary_field.wait_for(state="visible", timeout=timeout)
+        await summary_field.fill(summary)
+
+    if photo_path:
+        dz_input = frame.locator("input.dz-hidden-input")
+        await dz_input.wait_for(state="attached", timeout=timeout)
+
+        if photo_filename:
+            # Pertahankan nama file asli (mis. dari log_photo_path di
+            # Supabase, bukan nama file sementara hasil download lokal)
+            # dengan mengirim sebagai buffer + nama eksplisit, bukan path.
+            import mimetypes
+            mime_type, _ = mimetypes.guess_type(photo_filename)
+            with open(photo_path, "rb") as f:
+                file_bytes = f.read()
+            await dz_input.set_input_files({
+                "name": photo_filename,
+                "mimeType": mime_type or "application/octet-stream",
+                "buffer": file_bytes,
+            })
+        else:
+            await dz_input.set_input_files(photo_path)
+
+        try:
+            await frame.locator(
+                "ul.form-fileupload-value input[name='attachment_file_path']"
+            ).first.wait_for(state="attached", timeout=timeout)
+
+            await page.wait_for_function(
+                """() => {
+                    const iframe = document.querySelector('iframe[name*="work_logs"]');
+                    if (!iframe) return false;
+                    const doc = iframe.contentDocument || iframe.contentWindow.document;
+                    if (!doc) return false;
+                    const el = doc.querySelector(
+                        "ul.form-fileupload-value input[name='attachment_file_path']"
+                    );
+                    return !!(el && el.value && el.value.length > 0);
+                }""",
+                timeout=timeout,
+            )
+        except Exception as e:
+            raise Exception(f"Upload foto ke worklog gagal atau timeout menunggu attachment_file_path terisi: {e}")
+
+    await detail_editor.click()
+    plain_text = _quill_html_to_typeable_text(detail_html)
+    await detail_editor.type(plain_text, delay=10)
+
+    submit_btn = frame.locator("span#customBtnSubmit")
+    await submit_btn.wait_for(state="visible", timeout=timeout)
+    await submit_btn.click()
+
+    await _wait_block_overlay_gone(page, timeout_ms=timeout)
+
+    try:
+        await page.locator(WORK_LOGS_IFRAME_SELECTOR).wait_for(state="detached", timeout=8000)
+    except Exception:
+        vex_msg = await _dismiss_vex_dialog(page, context_label="submit_worklog (post-submit check)")
+        if vex_msg is not None and vex_msg.strip():
+            raise Exception(f"Submit WorkLog gagal, validasi: \"{vex_msg}\"")
+        raise Exception("Popup WorkLog tidak tertutup setelah submit -- kemungkinan gagal diam-diam.")

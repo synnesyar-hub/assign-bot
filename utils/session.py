@@ -15,7 +15,7 @@ async def load_session(browser):
         try:
             with open(SESSION_FILE, "r", encoding="utf-8") as f:
                 strorage = json.load(f)
-                context = await browser.new_context(strorage_state=strorage)
+                context = await browser.new_context(storage_state=strorage)
                 # log print
                 return context
         except Exception as e:

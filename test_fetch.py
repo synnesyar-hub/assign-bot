@@ -23,11 +23,13 @@ from automation.auto_resolve import (
     resolve_inc_to_record_id,
     check_measurement_only,
     recover_to_find_incident_page,
+    submit_worklog,          
+    TicketNotFoundError,    
 )
 
 # Scrape (True/False, tinggal ganti sesuai kebutuhan)
-RUN_SCRAPE_BOOKMARK1 = False    # -> Database
-RUN_SCRAPE_BOOKMARK2 = False   # -> Database2
+RUN_SCRAPE_BOOKMARK1 = True    # -> Database
+RUN_SCRAPE_BOOKMARK2 = True   # -> Database2
 RUN_SCRAPE_BOOKMARK3 = False   # -> Database3 (sekuensial biasa)
 
 RUN_SCRAPE_BOOKMARK4 = True    # -> Database4 (SQM)
@@ -52,6 +54,12 @@ BOT1_PARALLEL_SAMPLE_LIMIT = None
 
 RUN_BOT2_FOREVER = False
 RUN_BOT3 = False
+
+# Debug: test submit_worklog() untuk 1 ticket spesifik -- Tahap B dari
+# rencana pengujian Update Log sync worker.
+RUN_DEBUG_SUBMIT_WORKLOG = False
+DEBUG_WORKLOG_TICKET = "INC24943102"  # ganti sesuai ticket test yang aman
+DEBUG_WORKLOG_TEXT = "<p>testing dari Playwright otomatis</p>"
 
 RUN_DEBUG_SPECIFIC_TICKETS = False
 DEBUG_TICKET_LIST = ["INC51686696", "INC51629211"]
@@ -123,6 +131,32 @@ async def debug_check_specific_tickets(page, inc_numbers, worksheet_name):
     for r in results:
         print(r)
     return results
+
+
+async def debug_submit_worklog(page, inc_number, detail_html):
+    """
+    Test manual submit_worklog() untuk 1 ticket -- Tahap B.
+    """
+    print(f"\n=== [DEBUG] Test submit_worklog untuk {inc_number} ===")
+    try:
+        record_id = await resolve_inc_to_record_id(page, inc_number)
+        print(f"[DEBUG] Resolved -> record_id: {record_id}")
+    except TicketNotFoundError as e:
+        print(f"[ERR] {e}")
+        return {"inc_number": inc_number, "final": "TICKET_NOT_FOUND"}
+    except Exception as e:
+        print(f"[ERR] Resolve gagal: {e}")
+        return {"inc_number": inc_number, "final": "RESOLVE_FAILED"}
+
+    try:
+        await submit_worklog(page, detail_html, log_type="AGENTNOTE")
+        print(f"[OK] submit_worklog sukses untuk {inc_number}.")
+        return {"inc_number": inc_number, "final": "SUBMITTED"}
+    except Exception as e:
+        print(f"[ERR] submit_worklog gagal untuk {inc_number}: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"inc_number": inc_number, "final": "SUBMIT_FAILED"}
 
 
 async def debug_run_bot1_range(page, worksheet_name, start_index, end_index):
@@ -212,6 +246,10 @@ async def main():
             await debug_run_bot1_range(
                 page, DEBUG_BOT1_WORKSHEET, DEBUG_BOT1_START_INDEX, DEBUG_BOT1_END_INDEX
             )
+
+        if RUN_DEBUG_SUBMIT_WORKLOG:
+            result = await debug_submit_worklog(page, DEBUG_WORKLOG_TICKET, DEBUG_WORKLOG_TEXT)
+            print(f"\n=== [DEBUG] Hasil: {result} ===")
 
         if RUN_BOT1:
             inc_numbers = await get_all_incs(BOT1_WORKSHEET)

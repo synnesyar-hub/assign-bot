@@ -21,7 +21,7 @@ export default function BookmarkGuardDialog({ bookmarkedBy, onConfirm, onCancel 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl">
         <h3 className="text-base font-bold text-gray-900">Tiket Sudah Dibookmark</h3>
-        <p className="mt-2 text-sm text-gray-600">
+        <p className="mt-2 text-sm text-gray-800">
           Tiket ini sudah ditandai (bookmark) oleh <strong>{bookmarkedBy}</strong>. Apakah kamu sudah
           meminta izin untuk mengedit tiket ini?
         </p>

@@ -13,6 +13,7 @@ BOT_NAMES = {
     "takeowner": "run_takeowner",
     "actualsolution": "run_actualsolution",
     "ibooster": "run_ibooster",
+    "log_sync": "run_log_sync",
 }
 
 STANDALONE_KEYS = ["scrape", "takeowner", "actualsolution", "ibooster"]

@@ -71,11 +71,26 @@ export interface WoKendari {
 
   created_at: string
   updated_at: string
-  updated_by: string | null   // <-- baris baru
+  updated_by: string | null
 
   bookmarked_by: string | null
   bookmark_color: string | null
   bookmarked_at: string | null
+
+  // ===== LOG (write-back sync ke Insera) =====
+  log: string | null
+  log_synced: boolean
+  log_synced_at: string | null
+  log_sync_error: string | null
+  log_photo_path: string | null
+  log_summary: string | null
+
+  // ===== LAST LOG (AUTO, read-only — dari worklog_summary Insera) =====
+  last_log: string | null
+
+  // ===== SOFT DELETE =====
+  is_deleted: boolean
+  deleted_at: string | null
 }
 
 // Daftar kolom yang boleh diedit langsung di grid
@@ -94,29 +109,31 @@ export interface ColumnDef {
   key: keyof WoKendari | 'ttr' | 'ttr_manja'
   label: string
   editable: boolean
-  type: 'text' | 'status' | 'date' | 'readonly' | 'ttr' | 'ttr_manja'
+  type: 'text' | 'status' | 'date' | 'readonly' | 'ttr' | 'ttr_manja' | 'log'
   width?: string
 }
 
 export const COLUMN_DEFS: ColumnDef[] = [
-  { key: 'incident', label: 'Incident', editable: false, type: 'readonly', width: 'min-w-[120px]' },
-  { key: 'reported_date', label: 'Tanggal Lapor', editable: false, type: 'date', width: 'min-w-[140px]' },
-  { key: 'booking_date', label: 'Tgl Booking', editable: false, type: 'date', width: 'min-w-[140px]' },
+  { key: 'reported_date', label: 'Tanggal Lapor', editable: false, type: 'date', width: 'min-w-[160px]' },
+  { key: 'booking_date', label: 'Tgl Booking', editable: false, type: 'date', width: 'min-w-[160px]' },
   { key: 'customer_type_label', label: 'Tipe Pelanggan', editable: false, type: 'readonly', width: 'min-w-[120px]' },
+  { key: 'incident', label: 'Incident', editable: false, type: 'readonly', width: 'min-w-[120px]' },
   { key: 'service_no', label: 'No. Layanan', editable: false, type: 'readonly', width: 'min-w-[120px]' },
   { key: 'customer_name', label: 'Nama Pelanggan', editable: false, type: 'readonly', width: 'min-w-[160px]' },
   { key: 'contact_phone', label: 'No. HP', editable: false, type: 'readonly', width: 'min-w-[120px]' },
-  { key: 'source', label: 'Source', editable: false, type: 'readonly', width: 'min-w-[110px]' },  // <-- dipindah + jadi readonly
+  { key: 'source', label: 'Source', editable: false, type: 'readonly', width: 'min-w-[110px]' },
   { key: 'datek', label: 'Datek', editable: false, type: 'readonly', width: 'min-w-[100px]' },
+  { key: 'kendala', label: 'Kendala', editable: false, type: 'readonly', width: 'min-w-[180px]' },
   { key: 'rayon', label: 'Rayon', editable: false, type: 'readonly', width: 'min-w-[120px]' },
+  { key: 'ttr', label: 'TTR', editable: false, type: 'ttr', width: 'min-w-[110px]' },
+  { key: 'ttr_manja', label: 'TTR Manja', editable: false, type: 'ttr_manja', width: 'min-w-[110px]' },
+  { key: 'teknisi', label: 'Teknisi', editable: true, type: 'text', width: 'min-w-[120px]' },
+  { key: 'status', label: 'Status', editable: true, type: 'status', width: 'min-w-[160px]' },
+  { key: 'log', label: 'Log', editable: false, type: 'log', width: 'min-w-[220px]' },
+  { key: 'last_log', label: 'Last Log', editable: false, type: 'readonly', width: 'min-w-[200px]' },
   { key: 'sto', label: 'STO', editable: false, type: 'readonly', width: 'min-w-[80px]' },
   { key: 'odc', label: 'ODC', editable: false, type: 'readonly', width: 'min-w-[100px]' },
   { key: 'service_area', label: 'Area Layanan', editable: false, type: 'readonly', width: 'min-w-[120px]' },
-  { key: 'ttr', label: 'TTR', editable: false, type: 'ttr', width: 'min-w-[110px]' },
-  { key: 'ttr_manja', label: 'TTR Manja', editable: false, type: 'ttr_manja', width: 'min-w-[110px]' },
-  { key: 'kendala', label: 'Kendala', editable: false, type: 'readonly', width: 'min-w-[180px]' },
-  { key: 'status', label: 'Status', editable: true, type: 'status', width: 'min-w-[160px]' },
-  { key: 'teknisi', label: 'Teknisi', editable: true, type: 'text', width: 'min-w-[120px]' },
   { key: 'perbaikan', label: 'Perbaikan', editable: true, type: 'text', width: 'min-w-[180px]' },
   { key: 'link_alamat', label: 'Link Alamat', editable: true, type: 'text', width: 'min-w-[160px]' },
   { key: 'kategori_ttr', label: 'Kategori TTR', editable: true, type: 'text', width: 'min-w-[120px]' },

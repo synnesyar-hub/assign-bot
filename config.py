@@ -66,6 +66,10 @@ INS_USERNAME = os.getenv("INS_USERNAME", "")
 INS_PASSWORD = os.getenv("INS_PASSWORD", "")
 INS_OTP_SECRET = os.getenv("INS_OTP_SECRET", "")
 
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
 # ==== INSERA TICKET LIST (FILTERED) ====
 INS_TICKET_LIST_URL_1 = (
     "https://oss-incident.telkom.co.id/jw/web/userview/ticketIncidentService/ticketIncidentService/_/allTicketList"

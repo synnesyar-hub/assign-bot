@@ -5,6 +5,7 @@ export async function fetchTicketsFromTable(table: string): Promise<WoKendari[]>
   const { data, error } = await supabase
     .from(table)
     .select('*')
+    .eq('is_deleted', false)
     .order('status_order', { ascending: true })
 
   if (error) {

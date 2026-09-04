@@ -7,8 +7,10 @@ import { usePresence } from '@/context/PresenceContext'
 import { TicketEditorBadge } from '@/components/TicketEditorBadge'
 import { useDebouncedSave } from '@/lib/useDebouncedSave'
 import { toggleBookmark } from '@/lib/useBookmark'
+import { toggleDelete } from '@/lib/useDelete'
 import BookmarkGuardDialog from '@/components/BookmarkGuardDialog'
 import { useNow } from '@/lib/useNow'
+import UpdateLogPanel from './UpdateLogPanel'
 
 interface Props {
   item: WoKendari | null
@@ -25,6 +27,8 @@ const slaStyle = {
   warning: 'bg-amber-100 text-amber-700',
   breach: 'bg-red-100 text-red-700',
 }
+
+const DELETE_CONFIRM_DELAY_S = 5
 
 function PinIcon({ filled }: { filled: boolean }) {
   return filled ? (
@@ -50,6 +54,18 @@ function BookmarkIcon({ filled, color }: { filled: boolean; color?: string }) {
   ) : (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z" />
+    </svg>
+  )
+}
+
+function TrashIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M3 6h18" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
     </svg>
   )
 }
@@ -155,6 +171,52 @@ function EditableField({
   )
 }
 
+function DeleteConfirmDialog({
+  incident,
+  onCancel,
+  onConfirm,
+}: {
+  incident: string
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  const [secondsLeft, setSecondsLeft] = useState(DELETE_CONFIRM_DELAY_S)
+
+  useEffect(() => {
+    if (secondsLeft <= 0) return
+    const t = setTimeout(() => setSecondsLeft((s) => s - 1), 1000)
+    return () => clearTimeout(t)
+  }, [secondsLeft])
+
+  const canConfirm = secondsLeft <= 0
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl">
+        <h3 className="text-base font-bold text-gray-900">Hapus tiket ini?</h3>
+        <p className="mt-2 text-sm text-gray-800">
+          Tiket <span className="font-semibold text-gray-900">{incident}</span> akan dihapus dari daftar. Tindakan ini tidak bisa dibatalkan.
+        </p>
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            onClick={onCancel}
+            className="rounded-lg px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
+          >
+            Batal
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={!canConfirm}
+            className="rounded-lg bg-red-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-600 disabled:cursor-not-allowed disabled:bg-red-400"
+          >
+            {canConfirm ? 'Ya, hapus' : `Ya, hapus (${secondsLeft})`}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function IncidentDetailPanel({
   item,
   onClose,
@@ -167,11 +229,13 @@ export default function IncidentDetailPanel({
   const [lastUpdated, setLastUpdated] = useState<{ user: string; at: string } | null>(null)
   const [showGuard, setShowGuard] = useState(false)
   const [unlockedOnce, setUnlockedOnce] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const now = useNow()
 
   useEffect(() => {
     if (item) setLastUpdated(item.updated_by ? { user: item.updated_by, at: item.updated_at } : null)
     setUnlockedOnce(false)
+    setShowDeleteConfirm(false)
   }, [item?.id])
 
   if (!item) return null
@@ -193,10 +257,16 @@ export default function IncidentDetailPanel({
     if (error) alert(error)
   }
 
+  const handleConfirmDelete = async () => {
+    setShowDeleteConfirm(false)
+    const { error } = await toggleDelete(table, item)
+    if (error) alert(error)
+  }
+
   return (
     <>
       <div className="fixed inset-0 z-[35] bg-black/20" onClick={onClose} />
-      <div className="fixed right-0 top-0 z-40 h-full w-full max-w-md overflow-y-auto bg-white shadow-xl">
+      <div className="fixed right-0 top-0 z-40 h-full w-full max-w-2xl overflow-y-auto bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
           <div>
             <p className="text-xs text-gray-400">Detail Tiket</p>
@@ -205,7 +275,9 @@ export default function IncidentDetailPanel({
           <div className="flex items-center gap-1">
             <button
               onClick={onTogglePin}
-              className={`rounded-full p-2 ${isPinned ? 'text-amber-500' : 'text-gray-300 hover:text-gray-400'}`}
+              className={`rounded-full p-2 transition-colors ${
+                isPinned ? 'text-amber-500' : 'text-gray-300 hover:text-amber-500'
+              }`}
               title={isPinned ? 'Lepas penanda' : 'Tandai tiket ini'}
             >
               <PinIcon filled={isPinned} />
@@ -213,10 +285,19 @@ export default function IncidentDetailPanel({
             <button
               onClick={handleTogglePinnedBookmark}
               disabled={isBookmarkedByOther}
-              className={`rounded-full p-2 disabled:cursor-not-allowed disabled:opacity-40 ${!isBookmarkedByMe ? 'text-gray-300 hover:text-gray-400' : ''}`}
+              className={`rounded-full p-2 transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                !isBookmarkedByMe ? 'text-gray-300 hover:text-red-500' : ''
+              }`}
               title={isBookmarkedByMe ? 'Lepas bookmark' : 'Bookmark tiket ini'}
             >
               <BookmarkIcon filled={isBookmarkedByMe} color={isBookmarkedByMe ? (item.bookmark_color ?? '#ef4444') : undefined} />
+            </button>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="rounded-full p-2 text-gray-300 transition-colors hover:text-red-500"
+              title="Hapus tiket ini"
+            >
+              <TrashIcon />
             </button>
             <button onClick={onClose} className="rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
               ✕
@@ -296,6 +377,26 @@ export default function IncidentDetailPanel({
               <EditableField label="Job" value={item.job} column="job" ticketId={item.id} table={table} currentUser={currentUser} onSaved={handleSaved} locked={fieldsLocked} onLockedFocusAttempt={() => setShowGuard(true)} />
             </div>
           </div>
+
+          <div className="border-t border-gray-100 pt-4">
+            <UpdateLogPanel
+              table={table}
+              incident={item.incident}
+              ticketId={item.id}
+              isSynced={item.log_synced}
+              logSyncError={item.log_sync_error}
+              onSuccess={() => setLastUpdated({ user: currentUser, at: new Date().toISOString() })}
+            />
+          </div>
+
+          <div className="border-t border-gray-100 pt-4">
+            <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-gray-600">
+              Last Log
+            </p>
+            <p className="mt-0.5 whitespace-pre-wrap rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+              {item.last_log || '-'}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -307,6 +408,14 @@ export default function IncidentDetailPanel({
             setUnlockedOnce(true)
             setShowGuard(false)
           }}
+        />
+      )}
+
+      {showDeleteConfirm && (
+        <DeleteConfirmDialog
+          incident={item.incident}
+          onCancel={() => setShowDeleteConfirm(false)}
+          onConfirm={handleConfirmDelete}
         />
       )}
     </>

@@ -10,11 +10,14 @@ export interface WoTicketWithCity extends WoKendari {
   _kota: CityKey
 }
 
+const REALTIME_DEBOUNCE_MS = 800
+
 export function useAllTickets() {
   const [tickets, setTickets] = useState<WoTicketWithCity[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const isUnmountedRef = useRef(false)
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -34,6 +37,16 @@ export function useAllTickets() {
     }
   }, [])
 
+  // Event Realtime yang datang bertubi-tubi (mis. saat batch upsert ratusan baris)
+  // digabung jadi satu refetch saja, supaya tidak membanjiri koneksi browser.
+  const scheduleLoad = useCallback(() => {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+    debounceTimerRef.current = setTimeout(() => {
+      debounceTimerRef.current = null
+      if (!isUnmountedRef.current) load()
+    }, REALTIME_DEBOUNCE_MS)
+  }, [load])
+
   useEffect(() => {
     isUnmountedRef.current = false
     load()
@@ -49,7 +62,7 @@ export function useAllTickets() {
             'postgres_changes',
             { event: '*', schema: 'public', table },
             () => {
-              load()
+              scheduleLoad()
             }
           )
           .subscribe((status) => {
@@ -67,9 +80,10 @@ export function useAllTickets() {
 
     return () => {
       isUnmountedRef.current = true
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
       channels.forEach((ch) => supabase.removeChannel(ch))
     }
-  }, [load])
+  }, [load, scheduleLoad])
 
   async function changeStatus(kota: CityKey, id: number, status: WoStatus) {
     const table = CITY_TABLE[kota]
