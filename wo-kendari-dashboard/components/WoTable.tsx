@@ -154,14 +154,15 @@ function SortHeaderDropdown({
 }
 
 interface TableProps {
-  data: WoKendari[]
+  data: (WoKendari & { _kota?: string })[]
   onRowClick: (item: WoKendari) => void
   pinnedIds: Set<number>
-  sortHistory: SortOption[] // urutan lama -> baru; entry terakhir = prioritas utama
+  sortHistory: SortOption[]
   onSortHistoryChange: (v: SortOption[]) => void
+  selectedId: { id: number; kota: string } | null
 }
 
-export default function WoTable({ data, onRowClick, pinnedIds, sortHistory, onSortHistoryChange }: TableProps) {
+export default function WoTable({ data, onRowClick, pinnedIds, sortHistory, onSortHistoryChange, selectedId }: TableProps) {
   const now = useNow()
 
   const activeSortOption = sortHistory[sortHistory.length - 1] ?? null
@@ -261,7 +262,14 @@ export default function WoTable({ data, onRowClick, pinnedIds, sortHistory, onSo
         </thead>
         <tbody className="divide-y divide-gray-100">
           {active.map((row) => (
-            <RowItem key={row.id} row={row} onClick={() => onRowClick(row)} isPinned={pinnedIds.has(row.id)} now={now} />
+            <RowItem
+              key={row.id}
+              row={row}
+              onClick={() => onRowClick(row)}
+              isPinned={pinnedIds.has(row.id)}
+              now={now}
+              isSelected={selectedId?.id === row.id && selectedId?.kota === (row as unknown as { _kota: string })._kota}  // BARU
+            />
           ))}
 
           {active.length > 0 && inactive.length > 0 && (
@@ -279,7 +287,14 @@ export default function WoTable({ data, onRowClick, pinnedIds, sortHistory, onSo
           )}
 
           {inactive.map((row) => (
-            <RowItem key={row.id} row={row} onClick={() => onRowClick(row)} isPinned={pinnedIds.has(row.id)} now={now} />
+            <RowItem
+              key={row.id}
+              row={row}
+              onClick={() => onRowClick(row)}
+              isPinned={pinnedIds.has(row.id)}
+              now={now}
+              isSelected={selectedId?.id === row.id && selectedId?.kota === (row as unknown as { _kota: string })._kota}  // BARU
+            />
           ))}
         </tbody>
       </table>
@@ -292,11 +307,13 @@ function RowItem({
   onClick,
   isPinned,
   now,
+  isSelected,          
 }: {
-  row: WoKendari
+  row: WoKendari & { _kota?: string }
   onClick: () => void
   isPinned: boolean
   now: number
+  isSelected: boolean  
 }) {
   const rowStyle = row.bookmarked_by
     ? { backgroundColor: `${row.bookmark_color ?? '#ef4444'}1A` }
@@ -304,15 +321,21 @@ function RowItem({
 
   const stickyBgForRow = row.bookmarked_by
     ? ''
-    : isPinned
-      ? 'bg-amber-50/60'
-      : 'bg-white'
+    : isSelected
+      ? 'bg-slate-200'
+      : isPinned
+        ? 'bg-amber-50/60'
+        : 'bg-white'
 
   return (
     <tr
       onClick={onClick}
       style={rowStyle}
-      className={`cursor-pointer hover:bg-gray-50 ${!row.bookmarked_by && isPinned ? 'bg-amber-50/60' : ''}`}
+      className={`cursor-pointer border-l-4 transition-colors ${
+        isSelected
+          ? 'border-violet-500 bg-slate-200 hover:bg-slate-200'
+          : `border-transparent hover:bg-gray-50 ${!row.bookmarked_by && isPinned ? 'bg-amber-50/60' : ''}`
+      }`}
     >
       {COLUMN_DEFS.map((col) => {
         const stickyOffset = getStickyOffset(col.key)

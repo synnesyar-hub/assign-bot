@@ -94,6 +94,7 @@ export default function TiketPage() {
           pinnedIds={pinnedIds}
           sortHistory={sortHistory}
           onSortHistoryChange={setSortHistory}
+          selectedId={selectedTicket ? { id: selectedTicket.id, kota: selectedTicket._kota } : null}  // BARU
         />
       </div>
 
