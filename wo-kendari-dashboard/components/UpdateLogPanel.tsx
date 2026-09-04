@@ -11,6 +11,7 @@ const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false })
 
 const RETRY_COOLDOWN_MS = 15_000
 const SUCCESS_MESSAGE_MS = 5_000
+const ACCEPTED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/gif']
 
 const QUILL_MODULES = {
   toolbar: [['bold', 'italic', 'underline'], [{ list: 'ordered' }, { list: 'bullet' }], ['clean']],
@@ -36,6 +37,7 @@ export default function UpdateLogPanel({ table, incident, ticketId, isSynced, lo
   const [description, setDescription] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [isDraggingOver, setIsDraggingOver] = useState(false)
 
   const [summaryLocked, setSummaryLocked] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -102,11 +104,14 @@ export default function UpdateLogPanel({ table, incident, ticketId, isSynced, lo
     setEditing(null, null)
   }
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null
+  const processFile = (file: File | null) => {
     setPhotoFile(file)
     if (photoPreview) URL.revokeObjectURL(photoPreview)
     setPhotoPreview(file ? URL.createObjectURL(file) : null)
+  }
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    processFile(e.target.files?.[0] ?? null)
   }
 
   const handleRemovePhoto = () => {
@@ -114,6 +119,48 @@ export default function UpdateLogPanel({ table, incident, ticketId, isSynced, lo
     if (photoPreview) URL.revokeObjectURL(photoPreview)
     setPhotoPreview(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const handleDragOver = (e: React.DragEvent<HTMLLabelElement | HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (submitting) return
+    setIsDraggingOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent<HTMLLabelElement | HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDraggingOver(false)
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLLabelElement | HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDraggingOver(false)
+    if (submitting) return
+
+    // DEBUG SEMENTARA — lihat apa isi dataTransfer
+    console.log('dataTransfer.files:', e.dataTransfer.files)
+    console.log('dataTransfer.files.length:', e.dataTransfer.files.length)
+    console.log('dataTransfer.types:', e.dataTransfer.types)
+    console.log('dataTransfer.items:', e.dataTransfer.items)
+    console.log('dataTransfer.items.length:', e.dataTransfer.items.length)
+    if (e.dataTransfer.files.length > 0) {
+    console.log('file[0] name:', e.dataTransfer.files[0].name)
+    console.log('file[0] size:', e.dataTransfer.files[0].size)
+    console.log('file[0] type:', e.dataTransfer.files[0].type)
+    }
+
+    const file = e.dataTransfer.files?.[0]
+    if (!file) return
+
+    if (!ACCEPTED_PHOTO_TYPES.includes(file.type)) {
+      setError('Format foto harus JPEG, PNG, atau GIF')
+      return
+    }
+    setError(null)
+    processFile(file)
   }
 
   const secondsLeft = cooldownUntil ? Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000)) : 0
@@ -236,8 +283,20 @@ export default function UpdateLogPanel({ table, incident, ticketId, isSynced, lo
           id="log-photo-input"
         />
         {photoPreview ? (
-          <div className="relative mt-1 h-48 w-full overflow-hidden rounded-md border-2 border-gray-400">
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`relative mt-1 h-48 w-full overflow-hidden rounded-md border-2 transition-colors ${
+              isDraggingOver ? 'border-blue-500' : 'border-gray-400'
+            }`}
+          >
             <img src={photoPreview} alt="Preview" className="h-full w-full object-cover" />
+            {isDraggingOver && (
+              <div className="absolute inset-0 flex items-center justify-center bg-blue-600/70 text-sm font-semibold text-white">
+                Lepas untuk ganti foto
+              </div>
+            )}
             <button
               type="button"
               onClick={handleRemovePhoto}
@@ -250,9 +309,14 @@ export default function UpdateLogPanel({ table, incident, ticketId, isSynced, lo
         ) : (
           <label
             htmlFor="log-photo-input"
-            className="mt-1 flex h-48 w-full cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed border-gray-400 text-sm font-medium text-gray-500 hover:bg-gray-50"
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`mt-1 flex h-48 w-full cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed text-sm font-medium transition-colors hover:bg-gray-50 ${
+              isDraggingOver ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-gray-400 text-gray-500'
+            }`}
           >
-            Tap untuk pilih foto
+            {isDraggingOver ? 'Lepas untuk unggah foto' : 'Tap atau seret foto ke sini'}
           </label>
         )}
       </div>
